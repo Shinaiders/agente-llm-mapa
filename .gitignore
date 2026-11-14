@@ -1,0 +1,6 @@
+node_modules
+dist
+.superpowers
+audio-cache/*
+!audio-cache/voice-ref.wav
+.DS_Store
