@@ -22,7 +22,8 @@ export interface MapSim {
   restart(): void
 }
 
-export function useMapSim(): MapSim {
+/** `frozen` segura o relógio sem mexer no tocar/pausar da pessoa (tutorial aberto, viagem em trânsito). */
+export function useMapSim(frozen = false): MapSim {
   const [scenario, setScenarioState] = useState<ScenarioId>('normal')
   const [enabled, setEnabled] = useState<Enabled>(ALL_ON)
   const [hopIndex, setHopIndex] = useState(0)
@@ -33,10 +34,10 @@ export function useMapSim(): MapSim {
   const atEnd = hopIndex >= last
 
   useEffect(() => {
-    if (!playing) return
+    if (!playing || frozen) return
     const id = setTimeout(() => setHopIndex(atEnd ? 0 : hopIndex + 1), atEnd ? LOOP_PAUSE_MS : HOP_MS)
     return () => clearTimeout(id)
-  }, [playing, hopIndex, atEnd, result])
+  }, [playing, frozen, hopIndex, atEnd, result])
 
   const setScenario = useCallback((s: ScenarioId) => {
     setScenarioState(s)

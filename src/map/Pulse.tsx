@@ -44,3 +44,30 @@ export function Pulse({ hops, hopIndex, travelMs, reducedMotion }: Props) {
     </motion.div>
   )
 }
+
+/** O cartão correndo de um assunto ao outro durante a viagem. */
+export function TransitPulse({ from, to, ms, reducedMotion }: { from: string; to: string; ms: number; reducedMotion: boolean }) {
+  const asNode = (id: string) => (id === 'guardrails' ? 'guardrails-in' : id) as Hop['node']
+  const here = nodePosition(to)
+  if (reducedMotion) {
+    return (
+      <div className="pulse" style={{ left: here.x, top: here.y - 34 }} data-testid="transit" data-to={to}>
+        <OrderCard size="sm" shared={false} />
+      </div>
+    )
+  }
+  return (
+    <motion.div
+      key={`${from}>${to}`}
+      className="pulse pulse-travel pulse-transit"
+      data-testid="transit"
+      data-to={to}
+      style={{ offsetPath: `path("${pathBetween(asNode(from), asNode(to))}")`, offsetRotate: '0deg' }}
+      initial={{ offsetDistance: '0%', scale: 2.2 }}
+      animate={{ offsetDistance: '100%', scale: [2.2, 1.2, 1.2, 2.2] }}
+      transition={{ duration: ms / 1000, ease: [0.6, 0, 0.3, 1] }}
+    >
+      <OrderCard size="sm" shared={false} />
+    </motion.div>
+  )
+}
