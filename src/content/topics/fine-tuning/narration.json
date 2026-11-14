@@ -1,0 +1,12 @@
+{
+  "lines": [
+    "Pense em treinar para uma prova: depois de fazer muitos exercícios, você responde no jeito certo sem reler as instruções.",
+    "Com o Pip pode ser igual. Você junta muitos exemplos de pergunta e resposta, no jeito da pizzaria.",
+    "Esses exemplos entram no modelo, e ele muda de verdade.",
+    "Isso é o fine-tuning: continuar o treino do modelo com os seus exemplos, para ele aprender o seu jeito de falar.",
+    "Agora o Pip responde no jeito da casa, mesmo com um bilhete de regras bem curtinho.",
+    "Mas treinar custa tempo e dinheiro, e o que ele aprendeu fica velho. O cardápio muda todo dia.",
+    "Muitas vezes um bom bilhete de regras e a busca de documentos já resolvem. O treino fica para o fim.",
+    "Agora você conhece as peças do mapa. Volte lá e experimente desligar uma, para ver o que acontece."
+  ]
+}

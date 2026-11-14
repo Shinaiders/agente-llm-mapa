@@ -1,0 +1,187 @@
+## O que é
+
+Pense numa tomada de parede. Não importa se é uma lâmpada, um ventilador ou o carregador do celular: se o plugue é o padrão, encaixa. Ninguém refaz a fiação da casa para cada aparelho novo.
+
+O **MCP** (*Model Context Protocol*, ou "protocolo de contexto para modelos") é a tomada padrão dos agentes. É um padrão aberto para ligar ferramentas e dados a um agente de IA. Quem cria a ferramenta a oferece num **servidor MCP**; o agente tem um **cliente MCP** que se liga a qualquer servidor e descobre o que ele sabe fazer.
+
+Duas palavras que se confundem. A **tool** (ferramenta) é a coisa em si: "anotar pedido", "consultar estoque". O **MCP** é o padrão de encaixe: o jeito combinado de o agente descobrir as ferramentas e chamá-las. Dá para ter ferramentas sem MCP, escritas direto dentro do seu código. O MCP vale a pena quando você quer reaproveitar a mesma ferramenta em vários agentes.
+
+## Para que serve
+
+Um modelo sozinho só gera texto. Ele diz "vou anotar seu pedido", mas não anota nada. Para agir no mundo, ele precisa de ferramentas, e o MCP evita escrever uma ligação diferente para cada uma.
+
+<AntesDepois
+  antes={'Cada ferramenta tem o seu jeito de ser chamada. Para ligar o agente a cinco sistemas, você escreve cinco ligações diferentes, e cada agente novo repete o trabalho.'}
+  depois={'A cozinha publica a ferramenta "anotar_pedido" num servidor MCP uma vez. Qualquer agente com cliente MCP encaixa, lista e usa.'}
+/>
+
+<OndeSeEncaixa />
+
+O MCP recebe o pedido de ferramenta que o modelo faz depois de entender a pergunta, liga na ferramenta certa e devolve o resultado ao modelo. Se a ferramenta falhar, quem entra em cena é o fallback, o plano B.
+
+## Como montar
+
+Você vai criar uma cozinha que oferece a ferramenta `anotar_pedido` e um agente que a usa. Os exemplos usam TypeScript, a API do Claude e o pacote oficial `@modelcontextprotocol/sdk`. Instale os pacotes com `npm install @anthropic-ai/sdk @modelcontextprotocol/sdk zod` e deixe a chave em `ANTHROPIC_API_KEY`.
+
+Os blocos 2 a 5 formam um arquivo só, `mcp.ts`. Ele roda em dois modos: com o argumento `servidor`, vira a cozinha; sem argumento, é o agente.
+
+### 1. Entenda as três peças
+
+- **Servidor MCP:** quem oferece ferramentas (a cozinha).
+- **Cliente MCP:** quem se liga a um servidor, lista as ferramentas e as chama (o agente).
+- **Transporte:** o fio entre os dois. Aqui usamos **stdio**: o agente inicia o servidor como um processo filho, e os dois trocam mensagens pela entrada e saída do processo. Há também transportes por rede, para servidores remotos.
+
+### 2. Crie o servidor com a ferramenta anotar_pedido
+
+```ts
+import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
+import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
+import { z } from 'zod'
+
+let proximoNumero = 127
+
+async function iniciarServidor() {
+  const servidor = new McpServer({ name: 'cozinha-da-pizzaria', version: '1.0.0' })
+
+  servidor.registerTool(
+    'anotar_pedido',
+    {
+      description: 'Anota um pedido na cozinha da pizzaria e devolve o número do pedido.',
+      inputSchema: {
+        item: z.string().describe('O que o cliente pediu, por exemplo "calabresa grande"'),
+        entrega: z.boolean().describe('true se for para entregar, false se for retirar'),
+      },
+    },
+    async ({ item, entrega }) => {
+      const numero = proximoNumero++
+      console.error(`cozinha: pedido ${numero} anotado (${item}, ${entrega ? 'entrega' : 'retirada'})`)
+      return { content: [{ type: 'text', text: `pedido nº ${numero}` }] }
+    },
+  )
+
+  // stdio: o servidor lê e escreve mensagens pela entrada e saída do processo
+  await servidor.connect(new StdioServerTransport())
+}
+```
+
+O que importa aqui:
+
+- `McpServer` é a classe do servidor. O nome e a versão identificam a sua cozinha.
+- `registerTool` recebe o nome da ferramenta, uma configuração e a função que roda quando alguém a chama.
+- `inputSchema` descreve os argumentos com `zod`. O servidor valida o que chega, e a descrição de cada campo ajuda o modelo a preencher certo.
+- O retorno é uma lista `content` com blocos de texto.
+- Com stdio, a saída padrão do processo é o canal do protocolo. Por isso o log usa `console.error`: um `console.log` ali estragaria a conversa.
+
+<Aviso tipo="cuidado">
+Os nomes dessas classes e funções vêm da versão do pacote instalada ao escrever este tutorial. O pacote ainda evolui, então, se algum nome não bater, confira os tipos em `node_modules/@modelcontextprotocol/sdk`.
+</Aviso>
+
+### 3. Ligue o agente ao servidor e liste as ferramentas
+
+```ts
+import { Client } from '@modelcontextprotocol/sdk/client/index.js'
+import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js'
+
+async function conectar() {
+  const mcp = new Client({ name: 'pip', version: '1.0.0' })
+  // o agente inicia o servidor como um processo filho (este mesmo arquivo, em modo servidor)
+  await mcp.connect(new StdioClientTransport({ command: 'npx', args: ['tsx', 'mcp.ts', 'servidor'] }))
+
+  const { tools } = await mcp.listTools()
+  console.log('Ferramentas disponíveis:', tools.map((t) => t.name))
+  return { mcp, tools }
+}
+```
+
+`listTools` é a parte "padrão" do MCP: o agente não precisa saber de antemão o que a cozinha oferece, ela mesma diz o nome, a descrição e o esquema de cada ferramenta.
+
+### 4. Converta as ferramentas e rode o laço de chamada
+
+A API do Claude espera as ferramentas no formato `tools`. As do MCP têm quase os mesmos campos, então a conversão é direta. Depois, o laço: enquanto o modelo parar com `stop_reason === 'tool_use'`, o agente chama a ferramenta pelo cliente MCP e devolve o resultado.
+
+```ts
+import Anthropic from '@anthropic-ai/sdk'
+
+const claude = new Anthropic() // lê a chave de ANTHROPIC_API_KEY
+
+export async function atenderPedido(pergunta: string): Promise<string> {
+  const { mcp, tools } = await conectar()
+
+  const ferramentas: Anthropic.Tool[] = tools.map((t) => ({
+    name: t.name,
+    description: t.description,
+    input_schema: t.inputSchema,
+  }))
+
+  const mensagens: Anthropic.MessageParam[] = [{ role: 'user', content: pergunta }]
+
+  while (true) {
+    const resposta = await claude.messages.create({
+      model: 'claude-opus-5-5',
+      max_tokens: 16000,
+      system: 'Você é o Pip, atendente da Pizzaria do Bairro. Para anotar um pedido, use a ferramenta.',
+      tools: ferramentas,
+      messages: mensagens,
+    })
+
+    if (resposta.stop_reason !== 'tool_use') {
+      await mcp.close()
+      return resposta.content
+        .filter((bloco) => bloco.type === 'text')
+        .map((bloco) => bloco.text)
+        .join('')
+    }
+
+    mensagens.push({ role: 'assistant', content: resposta.content })
+
+    // todos os tool_result voltam juntos, numa única mensagem do usuário
+    const resultados: Anthropic.ToolResultBlockParam[] = []
+    for (const bloco of resposta.content) {
+      if (bloco.type !== 'tool_use') continue
+      const saida = await mcp.callTool({
+        name: bloco.name,
+        arguments: bloco.input as Record<string, unknown>,
+      })
+      resultados.push({
+        type: 'tool_result',
+        tool_use_id: bloco.id,
+        content: JSON.stringify(saida.content),
+        is_error: saida.isError === true,
+      })
+    }
+    mensagens.push({ role: 'user', content: resultados })
+  }
+}
+```
+
+O que importa aqui:
+
+- `input_schema` recebe o esquema que o servidor publicou. É o mesmo desenho, só muda de mãos.
+- Quando o modelo decide usar a ferramenta, a resposta vem com `stop_reason === 'tool_use'` e blocos `tool_use`. O modelo não executa nada: ele só pede.
+- Você devolve a resposta do assistente à conversa e, em seguida, **todos** os `tool_result` numa única mensagem de usuário, cada um com o `tool_use_id` do pedido que responde.
+- O laço repete até o modelo parar por outro motivo (normalmente `end_turn`), com o texto final para o cliente.
+- Em produção, coloque também um limite de voltas no laço, para um modelo confuso não ficar chamando ferramentas para sempre.
+
+### 5. Confira o resultado
+
+```ts
+if (process.argv[2] === 'servidor') {
+  await iniciarServidor()
+} else {
+  console.log(await atenderPedido('Quero uma calabresa grande para entregar, por favor.'))
+}
+```
+
+Rode `npx tsx mcp.ts`. No terminal você deve ver a lista de ferramentas, o log da cozinha anotando o pedido e a confirmação do Pip, algo como "Anotado! Seu pedido é o nº 127". A frase exata muda de uma execução para outra, mas o número vem da ferramenta, não do modelo.
+
+<Aviso tipo="dica">
+Existem servidores MCP prontos para muitos serviços. Antes de escrever o seu, veja se já há um. E lembre que ferramenta de terceiros executa código na sua máquina: só ligue servidores em que você confia.
+</Aviso>
+
+## Erros comuns
+
+- **Confundir tool com MCP.** Tool é a ferramenta; MCP é o padrão para encaixá-la. Dá para usar uma sem o outro.
+- **Usar `console.log` num servidor stdio.** A saída padrão é o canal do protocolo. Qualquer texto extra corrompe as mensagens. Escreva logs em `console.error`.
+- **Devolver só alguns `tool_result`.** Se o modelo pediu duas ferramentas de uma vez, os dois resultados voltam juntos na mesma mensagem, cada um com o seu `tool_use_id`.
+- **Descrição de ferramenta vaga.** O modelo escolhe a ferramenta pela descrição e pelos campos. "Faz coisas com pedidos" não ajuda; diga o que faz e o que devolve.
+- **Confiar em qualquer servidor.** Um servidor MCP é código de outra pessoa. Dê só as permissões necessárias e prefira servidores de fonte conhecida.

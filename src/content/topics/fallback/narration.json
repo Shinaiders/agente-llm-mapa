@@ -1,0 +1,12 @@
+{
+  "lines": [
+    "Se o forno principal quebra no meio da noite, a pizzaria não fecha: ela usa o outro forno.",
+    "Mas antes de desistir do primeiro, vale tentar acender de novo.",
+    "No agente é igual: o modelo principal falha, e o sistema espera um pouquinho antes de insistir.",
+    "Passado esse tempo, ele tenta de novo. Mas falha outra vez.",
+    "Então entra o plano B: o sistema troca para o modelo reserva.",
+    "O modelo reserva responde, e o cliente nem percebe que houve algum problema.",
+    "Se até o reserva falhar, o Pip manda uma resposta de emergência, educada, em vez de ficar mudo.",
+    "Isso é fallback e retry. Para saber se tudo isso funciona bem, a próxima peça mede os resultados: os evals."
+  ]
+}

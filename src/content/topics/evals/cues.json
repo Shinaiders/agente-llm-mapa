@@ -1,0 +1,50 @@
+[
+  {
+    "index": 0,
+    "text": "Antes de atender cliente de verdade, o Pip faz uma prova com gabarito, como na escola.",
+    "start": 0,
+    "end": 5.32
+  },
+  {
+    "index": 1,
+    "text": "Uma fila de perguntas de teste passa por ele, uma de cada vez. Tem até uma pergunta de golpe e uma que ele não sabe.",
+    "start": 5.57,
+    "end": 12.51
+  },
+  {
+    "index": 2,
+    "text": "Cada resposta é conferida com o gabarito e ganha certo ou errado.",
+    "start": 12.76,
+    "end": 16.85
+  },
+  {
+    "index": 3,
+    "text": "No fim sai uma nota. Oito de dez, por exemplo. Agora você sabe o quanto pode confiar nele.",
+    "start": 17.1,
+    "end": 22.58
+  },
+  {
+    "index": 4,
+    "text": "Aí alguém muda uma regra no bilhete. Parece pouca coisa, mas pode estragar respostas que antes estavam boas.",
+    "start": 22.83,
+    "end": 29.62
+  },
+  {
+    "index": 5,
+    "text": "A prova roda de novo e a nota cai para seis. O aviso chega antes de qualquer cliente ver o erro.",
+    "start": 29.87,
+    "end": 35.64
+  },
+  {
+    "index": 6,
+    "text": "Essa prova se chama eval. Mudou o bilhete, o modelo ou uma ferramenta? Faça a prova de novo.",
+    "start": 35.89,
+    "end": 41.49
+  },
+  {
+    "index": 7,
+    "text": "Mas e se o Pip precisar aprender um jeito novo de falar? Aí entra o treino: fine-tuning.",
+    "start": 41.74,
+    "end": 47.14
+  }
+]

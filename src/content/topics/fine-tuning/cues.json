@@ -1,0 +1,50 @@
+[
+  {
+    "index": 0,
+    "text": "Pense em treinar para uma prova: depois de fazer muitos exercícios, você responde no jeito certo sem reler as instruções.",
+    "start": 0,
+    "end": 7.58
+  },
+  {
+    "index": 1,
+    "text": "Com o Pip pode ser igual. Você junta muitos exemplos de pergunta e resposta, no jeito da pizzaria.",
+    "start": 7.83,
+    "end": 13.88
+  },
+  {
+    "index": 2,
+    "text": "Esses exemplos entram no modelo, e ele muda de verdade.",
+    "start": 14.13,
+    "end": 17.6
+  },
+  {
+    "index": 3,
+    "text": "Isso é o fine-tuning: continuar o treino do modelo com os seus exemplos, para ele aprender o seu jeito de falar.",
+    "start": 17.85,
+    "end": 24.67
+  },
+  {
+    "index": 4,
+    "text": "Agora o Pip responde no jeito da casa, mesmo com um bilhete de regras bem curtinho.",
+    "start": 24.92,
+    "end": 30.06
+  },
+  {
+    "index": 5,
+    "text": "Mas treinar custa tempo e dinheiro, e o que ele aprendeu fica velho. O cardápio muda todo dia.",
+    "start": 30.31,
+    "end": 36.11
+  },
+  {
+    "index": 6,
+    "text": "Muitas vezes um bom bilhete de regras e a busca de documentos já resolvem. O treino fica para o fim.",
+    "start": 36.36,
+    "end": 42.47
+  },
+  {
+    "index": 7,
+    "text": "Agora você conhece as peças do mapa. Volte lá e experimente desligar uma, para ver o que acontece.",
+    "start": 42.72,
+    "end": 48.8
+  }
+]

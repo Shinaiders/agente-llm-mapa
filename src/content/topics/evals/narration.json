@@ -1,0 +1,12 @@
+{
+  "lines": [
+    "Antes de atender cliente de verdade, o Pip faz uma prova com gabarito, como na escola.",
+    "Uma fila de perguntas de teste passa por ele, uma de cada vez. Tem até uma pergunta de golpe e uma que ele não sabe.",
+    "Cada resposta é conferida com o gabarito e ganha certo ou errado.",
+    "No fim sai uma nota. Oito de dez, por exemplo. Agora você sabe o quanto pode confiar nele.",
+    "Aí alguém muda uma regra no bilhete. Parece pouca coisa, mas pode estragar respostas que antes estavam boas.",
+    "A prova roda de novo e a nota cai para seis. O aviso chega antes de qualquer cliente ver o erro.",
+    "Essa prova se chama eval. Mudou o bilhete, o modelo ou uma ferramenta? Faça a prova de novo.",
+    "Mas e se o Pip precisar aprender um jeito novo de falar? Aí entra o treino: fine-tuning."
+  ]
+}

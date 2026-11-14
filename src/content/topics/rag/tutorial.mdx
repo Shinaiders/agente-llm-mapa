@@ -1,0 +1,154 @@
+## O que é
+
+Pense numa prova com consulta. Quem abre o livro na hora de responder acerta muito mais do que quem tenta lembrar de cabeça. O Pip precisa fazer o mesmo: antes de dizer o preço de uma pizza, ele olha o cardápio.
+
+**RAG** (sigla em inglês para "geração com busca de apoio") é essa técnica. Em vez de confiar só no que o modelo aprendeu no treino, você faz uma busca na sua base de textos, pega os trechos mais relevantes e entrega junto com a pergunta. O modelo escreve a resposta com esses trechos na frente.
+
+Repare que o modelo não "aprende" o cardápio. Os trechos valem só para aquela conversa. Se o cardápio mudar amanhã, você troca o arquivo e a próxima resposta já sai certa, sem treinar nada.
+
+## Para que serve
+
+Para o modelo responder com informação que ele nunca viu: o cardápio de hoje, o regulamento da promoção, o manual da loja. Também serve para mostrar de onde veio cada resposta.
+
+<AntesDepois
+  antes={'O cliente pergunta o preço da quatro queijos grande. O modelo não leu o seu cardápio e responde "R$ 38,00" com toda a confiança. Está errado.'}
+  depois={'A pergunta vira uma busca, voltam dois trechos do cardápio, e o Pip responde "R$ 58,00 (trecho 1)". O cliente e você conseguem conferir.'}
+/>
+
+<OndeSeEncaixa />
+
+O RAG recebe a pergunta depois que ela passou pelo modelo e entrega os trechos de volta a ele. Quem faz a busca de verdade, nos sistemas maiores, são os embeddings e o banco vetorial, assuntos que ainda chegam ao site.
+
+## Como montar
+
+O exemplo abaixo roda sem nenhum serviço de busca: a busca é uma contagem de palavras em comum, escrita em TypeScript puro. Serve para entender o desenho. Os exemplos usam TypeScript e a API do Claude, e assumem o SDK instalado (`npm install @anthropic-ai/sdk`) e a chave em `ANTHROPIC_API_KEY`.
+
+### 1. Quebre o cardápio em pedaços pequenos
+
+Um texto inteiro de cardápio é grande demais para mandar a cada pergunta, e a maior parte não ajuda. Por isso você corta em trechos pequenos, cada um com uma ideia só.
+
+```ts
+import Anthropic from '@anthropic-ai/sdk'
+
+const claude = new Anthropic() // lê a chave de ANTHROPIC_API_KEY
+
+interface Trecho {
+  id: number
+  texto: string
+}
+
+const CARDAPIO = `Margherita grande: R$ 49,00
+Quatro queijos grande: R$ 58,00
+Quatro queijos broto: R$ 36,00
+Calabresa grande: R$ 52,00
+Borda recheada: acrescenta R$ 8,00
+Entrega: grátis em pedidos acima de R$ 60,00`
+
+// aqui cada linha vira um trecho; em cardápios maiores, corte por seção
+const trechos: Trecho[] = CARDAPIO.split('\n').map((texto, id) => ({ id, texto }))
+```
+
+O `id` é o número do trecho. Vamos usá-lo no fim para mostrar a fonte.
+
+### 2. Busque os pedaços mais parecidos com a pergunta
+
+Aqui a busca é simples: conta quantas palavras o trecho tem em comum com a pergunta.
+
+```ts
+function palavras(texto: string): Set<string> {
+  const limpo = texto
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '') // tira acentos
+    .replace(/[^a-z0-9 ]/g, ' ')
+  return new Set(limpo.split(/\s+/).filter((p) => p.length > 2))
+}
+
+export function buscar(pergunta: string, quantos = 3): Trecho[] {
+  const daPergunta = palavras(pergunta)
+  return trechos
+    .map((t) => ({ trecho: t, nota: [...palavras(t.texto)].filter((p) => daPergunta.has(p)).length }))
+    .filter((x) => x.nota > 0)
+    .sort((a, b) => b.nota - a.nota)
+    .slice(0, quantos)
+    .map((x) => x.trecho)
+}
+```
+
+<Aviso tipo="cuidado">
+Busca por palavras iguais é só um jeito didático de começar. Ela não entende que "valor" e "preço" querem dizer a mesma coisa. Sistemas reais usam **embeddings** (números que representam o sentido de um texto) guardados num **banco vetorial**, e comparam o sentido, não as palavras. Esses dois assuntos chegam na próxima etapa do site. Vale saber também que o SDK da Anthropic não tem endpoint de embeddings: você usa um serviço ou modelo de embeddings à parte.
+</Aviso>
+
+### 3. Monte o prompt com os trechos
+
+Os trechos entram no bilhete de regras, junto com duas instruções importantes: responder só com base neles e dizer "não sei" quando a resposta não estiver lá.
+
+```ts
+function montarRegras(achados: Trecho[]): string {
+  const cardapio = achados.map((t) => `[trecho ${t.id}] ${t.texto}`).join('\n')
+  return `Você é o Pip, atendente da Pizzaria do Bairro. Responda em português, em poucas frases.
+Responda SOMENTE com base nos trechos do cardápio abaixo.
+Se a resposta não estiver nos trechos, diga "não sei" e que vai verificar.
+Ao responder, cite o trecho usado, no formato [trecho N].
+
+Trechos do cardápio:
+${cardapio}`
+}
+```
+
+Sem a instrução do "não sei", o modelo tende a completar com o que ele acha que sabe, e você volta ao problema do chute.
+
+### 4. Chame o modelo
+
+```ts
+export async function perguntarComRag(pergunta: string): Promise<{ resposta: string; fontes: Trecho[] }> {
+  const achados = buscar(pergunta)
+
+  const resposta = await claude.messages.create({
+    model: 'claude-opus-5-5',
+    max_tokens: 16000,
+    system: montarRegras(achados),
+    output_config: { effort: 'low' },
+    messages: [{ role: 'user', content: pergunta }],
+  })
+
+  if (resposta.stop_reason === 'refusal') {
+    return { resposta: 'Não posso ajudar com isso. Quer fazer um pedido?', fontes: [] }
+  }
+
+  const texto = resposta.content
+    .filter((bloco) => bloco.type === 'text')
+    .map((bloco) => bloco.text)
+    .join('')
+
+  // 5. Mostrar de qual trecho veio a resposta
+  const citados = achados.filter((t) => texto.includes(`[trecho ${t.id}]`))
+  return { resposta: texto, fontes: citados }
+}
+```
+
+A busca roda antes da chamada, com a pergunta do cliente. O que o modelo recebe é a pergunta mais os trechos achados.
+
+### 5. Mostre de qual trecho veio a resposta
+
+Como pedimos ao modelo que citasse `[trecho N]`, as últimas linhas da função acima já separam os trechos citados. Rode e confira.
+
+```ts
+const { resposta, fontes } = await perguntarComRag('Quanto custa a quatro queijos grande?')
+console.log(resposta)
+console.log('Fontes:', fontes.map((t) => t.texto))
+```
+
+Você deve ver algo como "A quatro queijos grande custa R$ 58,00 [trecho 1]" e, embaixo, a linha do cardápio. Se perguntar algo que não está no cardápio, como o preço de uma sobremesa, o Pip deve dizer que não sabe. A redação exata da resposta pode variar de uma execução para outra.
+
+<Aviso tipo="dica">
+Mostrar a fonte para o cliente (ou guardá-la no registro) ajuda a descobrir por que uma resposta saiu errada: ou a busca trouxe o trecho errado, ou o modelo ignorou o trecho certo.
+</Aviso>
+
+## Erros comuns
+
+- **Pedaços grandes demais ou pequenos demais.** Um cardápio inteiro num trecho só traz muito ruído; uma palavra solta perde o contexto. Procure trechos que façam sentido sozinhos.
+- **Não mandar a instrução do "não sei".** Sem ela, quando a busca não acha nada útil, o modelo chuta de novo, só que agora parecendo ter consultado.
+- **Confiar na busca por palavras iguais.** Ela perde sinônimos e erros de digitação. Para um produto de verdade, use embeddings e banco vetorial.
+- **Deixar o cardápio desatualizado.** O RAG responde com o que está na sua base. Se o preço mudou e o arquivo não, a resposta sai errada e com cara de certa.
+- **Mandar trechos demais.** Mais texto não é melhor: gasta mais, e o trecho que importa pode se perder no meio. Fique com os poucos mais relevantes.

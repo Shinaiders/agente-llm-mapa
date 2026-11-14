@@ -1,0 +1,166 @@
+## O que é
+
+Imagine que ontem você fez uma conta difícil e anotou o resultado num caderno. Hoje alguém pede a mesma conta. Você não refaz: abre o caderno e copia a resposta. Mais rápido, e sem gastar esforço de novo.
+
+**Cache** é esse caderno. O agente guarda perguntas já respondidas e, quando a mesma pergunta chega outra vez, entrega a resposta guardada sem chamar o modelo.
+
+Atenção, porque a palavra "cache" aparece em **dois** lugares neste assunto, e eles são coisas diferentes:
+
+- **Cache de resposta**, feito por você. É o caderno de verdade: sua função guarda a resposta pronta e, se a pergunta se repetir, o modelo nem é chamado.
+- **Cache de prompt**, feito pela API. O modelo é chamado normalmente, mas a parte fixa do texto que você manda (como o cardápio inteiro) é reaproveitada, e essa parte sai mais barata e mais rápida.
+
+## Para que serve
+
+Para não pagar nem esperar duas vezes pelo mesmo trabalho. Numa pizzaria, metade das perguntas é a mesma: horário, endereço, se aceita cartão.
+
+<AntesDepois
+  antes={'Cem clientes perguntam "até que horas vocês abrem?" e o modelo é chamado cem vezes, cobrando e demorando cem vezes.'}
+  depois={'O modelo responde uma vez, a resposta vai para o caderno e as outras noventa e nove saem na hora, sem custo.'}
+/>
+
+Cache só serve para o que se repete e não muda. Resposta que depende de quem pergunta, ou do momento, não pode ficar guardada.
+
+<OndeSeEncaixa />
+
+A mensagem chega do guardrail de entrada e passa pelo cache antes de qualquer outra coisa. Se o caderno tem a resposta, ela segue direto para a saída. Se não tem, a pergunta vai ao modelo, e a resposta nova é anotada no caderno na volta.
+
+## Como montar
+
+Você vai montar os dois tipos de cache em cinco passos. Os exemplos usam TypeScript e a API do Claude.
+
+### 1. Crie a chave da pergunta
+
+"Até que horas vocês abrem?" e "até que horas vocês abrem" são a mesma pergunta. A chave do caderno precisa ignorar maiúsculas, acentos e pontuação.
+
+```ts
+export function chaveDaPergunta(pergunta: string): string {
+  return pergunta
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '') // tira os acentos
+    .replace(/[^a-z0-9 ]/g, ' ') // tira pontuação
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+```
+
+### 2. Monte o caderno com validade
+
+Um `Map` do JavaScript já serve de caderno: a chave é a pergunta normalizada e o valor guarda a resposta e a hora em que ela vence.
+
+```ts
+const VALIDADE_EM_MINUTOS = 60
+const caderno = new Map<string, { resposta: string; venceEm: number }>()
+
+export function buscarNoCaderno(chave: string): string | undefined {
+  const anotacao = caderno.get(chave)
+  if (!anotacao) return undefined
+  if (Date.now() > anotacao.venceEm) {
+    caderno.delete(chave) // venceu: apaga e finge que nunca esteve lá
+    return undefined
+  }
+  return anotacao.resposta
+}
+
+export function anotarNoCaderno(chave: string, resposta: string): void {
+  caderno.set(chave, { resposta, venceEm: Date.now() + VALIDADE_EM_MINUTOS * 60_000 })
+}
+```
+
+A validade importa. O horário da pizzaria pode mudar, e uma resposta velha guardada para sempre vira resposta errada. Aqui são sessenta minutos; escolha o tempo conforme o quanto a informação muda. Esse `Map` vive na memória do programa e some quando ele reinicia. Para durar mais, ou para servir vários servidores, use um banco de dados como o Redis.
+
+### 3. Decida quando NÃO guardar
+
+Nem toda resposta vai para o caderno. Perguntas pessoais e perguntas sobre algo que muda a cada minuto ficam de fora.
+
+```ts
+const SINAIS_DE_PERGUNTA_PESSOAL = [/meu pedido/i, /minha entrega/i, /meu endere[cç]o/i, /\bmeu\b|\bminha\b/i, /agora|hoje|já saiu/i]
+
+export function podeGuardar(pergunta: string): boolean {
+  return !SINAIS_DE_PERGUNTA_PESSOAL.some((sinal) => sinal.test(pergunta))
+}
+```
+
+"Meu pedido já saiu?" tem uma resposta diferente para cada cliente e muda a cada minuto. Se ela fosse para o caderno, o próximo cliente receberia o pedido de outra pessoa. A lista de sinais acima é só um começo: ela erra, e o mais seguro é guardar apenas perguntas que você sabe que valem para todo mundo.
+
+<Aviso tipo="cuidado">
+Guardar resposta pessoal no cache é um jeito clássico de vazar dado de um cliente para outro. Na dúvida, não guarde.
+</Aviso>
+
+### 4. Consulte o caderno antes de chamar o modelo
+
+Agora junte as peças: procure no caderno, e só chame o modelo se não achar.
+
+```ts
+export async function responder(pergunta: string): Promise<string> {
+  const chave = chaveDaPergunta(pergunta)
+
+  if (podeGuardar(pergunta)) {
+    const pronta = buscarNoCaderno(chave)
+    if (pronta) return pronta // saiu direto do caderno: sem chamar o modelo
+  }
+
+  const resposta = await claude.messages.create({
+    model: 'claude-opus-5-5',
+    max_tokens: 16000,
+    system: 'Você é o Pip, atendente da Pizzaria do Bairro. Responda em português, em poucas frases.',
+    output_config: { effort: 'low' },
+    messages: [{ role: 'user', content: pergunta }],
+  })
+
+  const texto = resposta.content
+    .filter((bloco) => bloco.type === 'text')
+    .map((bloco) => bloco.text)
+    .join('')
+
+  if (resposta.stop_reason === 'end_turn' && podeGuardar(pergunta)) anotarNoCaderno(chave, texto)
+  return texto
+}
+```
+
+O que importa: a consulta vem **antes** da chamada ao modelo. Só se anota quando a resposta terminou normalmente (`end_turn`), para não guardar texto cortado. Rodando as duas últimas linhas, a segunda pergunta sai do caderno.
+
+### 5. O outro cache: o cache de prompt
+
+Se a parte fixa do `system` é grande (cardápio, preços, regras), peça à API para reaproveitá-la entre chamadas. Você marca o bloco com `cache_control`.
+
+```ts
+const CARDAPIO_E_REGRAS = `Você é o Pip, atendente da Pizzaria do Bairro.
+(Aqui entram o cardápio completo, os preços, os horários e as regras da casa.
+Esta parte é longa e igual em todas as conversas.)`
+
+export async function responderComCachePrompt(pergunta: string): Promise<string> {
+  const resposta = await claude.messages.create({
+    model: 'claude-opus-5-5',
+    max_tokens: 16000,
+    system: [{ type: 'text', text: CARDAPIO_E_REGRAS, cache_control: { type: 'ephemeral' } }],
+    output_config: { effort: 'low' },
+    messages: [{ role: 'user', content: pergunta }],
+  })
+
+  console.log('lidos do cache de prompt:', resposta.usage.cache_read_input_tokens)
+  console.log('gravados no cache de prompt:', resposta.usage.cache_creation_input_tokens)
+
+  return resposta.content
+    .filter((bloco) => bloco.type === 'text')
+    .map((bloco) => bloco.text)
+    .join('')
+}
+
+console.log(await responder('Até que horas vocês abrem?'))
+console.log(await responder('até que horas vocês abrem'))
+```
+
+Para conferir se funcionou, olhe `resposta.usage.cache_read_input_tokens`: se for maior que zero, aquela parte foi lida do cache. Na primeira chamada o valor é zero, e `cache_creation_input_tokens` mostra o que foi gravado. Isso só vale para textos grandes: cada modelo tem um tamanho mínimo, e abaixo dele a API não cacheia, sem dar erro. Consulte a documentação do provedor para o mínimo atual e para quanto tempo o cache dura.
+
+<Aviso tipo="dica">
+O cache de prompt compara o começo do texto. Deixe o que muda (a pergunta do cliente, a data) no fim, e o que não muda no começo. Qualquer mudança no meio da parte fixa invalida o resto.
+</Aviso>
+
+## Erros comuns
+
+- **Guardar resposta pessoal ou que muda.** "Meu pedido já saiu?", saldo, estoque e preço do dia não podem ficar no caderno. Uma resposta velha parece certa e está errada.
+- **Esquecer a validade.** Sem prazo, uma resposta antiga fica para sempre. Defina em quantos minutos ela vence.
+- **Chave sem normalizar.** Se "Abre hoje?" e "abre hoje" viram chaves diferentes, o caderno quase nunca acerta.
+- **Confundir os dois caches.** O cache de resposta evita chamar o modelo. O cache de prompt chama o modelo e só barateia a parte fixa. Um não substitui o outro.
+- **Esperar que o cache de prompt funcione com texto pequeno.** Abaixo do tamanho mínimo, nada é guardado e nada avisa. Confira sempre `cache_read_input_tokens`.

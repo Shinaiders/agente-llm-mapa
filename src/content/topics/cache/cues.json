@@ -1,0 +1,50 @@
+[
+  {
+    "index": 0,
+    "text": "Se você já resolveu uma conta ontem, não precisa fazer tudo de novo hoje.",
+    "start": 0,
+    "end": 4.53
+  },
+  {
+    "index": 1,
+    "text": "Basta abrir o caderno onde anotou a resposta e copiar de lá.",
+    "start": 4.78,
+    "end": 8.58
+  },
+  {
+    "index": 2,
+    "text": "O Pip tem um caderno assim, o cache: um lugar para guardar respostas prontas.",
+    "start": 8.83,
+    "end": 13.58
+  },
+  {
+    "index": 3,
+    "text": "A pergunta chega: até que horas vocês abrem? O caderno ainda está vazio, então ela segue até o modelo.",
+    "start": 13.83,
+    "end": 20.11
+  },
+  {
+    "index": 4,
+    "text": "O modelo pensa, responde, e a resposta é anotada no caderno com a pergunta.",
+    "start": 20.36,
+    "end": 25.01
+  },
+  {
+    "index": 5,
+    "text": "Mais tarde, chega a mesma pergunta. Agora o Pip folheia o caderno e acha a resposta.",
+    "start": 25.26,
+    "end": 30.46
+  },
+  {
+    "index": 6,
+    "text": "Ela sai direto, mais rápida e sem custo, porque o modelo nem foi chamado.",
+    "start": 30.71,
+    "end": 35.22
+  },
+  {
+    "index": 7,
+    "text": "Mas cuidado: pergunta pessoal ou que muda, como o pedido já saiu, não vai para o caderno. Falta ver o modelo.",
+    "start": 35.47,
+    "end": 42.06
+  }
+]

@@ -1,0 +1,151 @@
+## O que é
+
+Se o forno principal quebra no meio da noite, a pizzaria não fecha: usa o forno reserva. E antes de desistir do primeiro, alguém tenta acender de novo, porque às vezes foi só um engasgo.
+
+**Retry** é tentar de novo quando uma chamada falha. **Fallback** é o plano B: quando o modelo principal não responde de jeito nenhum, você passa o pedido para outro modelo. E se até o plano B falhar, o agente responde com uma mensagem de emergência em vez de ficar mudo.
+
+As falhas acontecem por motivos que não são culpa do seu código: o servidor ficou sobrecarregado, a rede oscilou, você passou do limite de pedidos por minuto. Elas são raras, mas num agente em produção, mais cedo ou mais tarde, vão acontecer.
+
+## Para que serve
+
+Para que um tropeço na API não vire um cliente sem resposta.
+
+<AntesDepois
+  antes={'O modelo dá erro por três segundos. O agente também dá erro, o cliente vê uma tela quebrada e desiste do pedido.'}
+  depois={'O agente espera um pouco, tenta de novo e, se precisar, troca de modelo. O cliente recebe a resposta e nem sabe que algo deu errado.'}
+/>
+
+Repetir tem limite: se você insistir sem parar, só piora a fila do servidor e o cliente espera mais ainda. Por isso há esperas crescentes, poucas tentativas e um tempo total máximo.
+
+<OndeSeEncaixa />
+
+Essa peça fica em volta da chamada ao modelo. Ela recebe a pergunta que já passou pelo guardrail e pelo cache, tenta o modelo principal, tenta o reserva se precisar, e entrega a resposta (ou o aviso de emergência) de volta ao fluxo, que segue para a checagem de saída.
+
+## Como montar
+
+Você vai montar o plano B do Pip em cinco passos. Os exemplos usam TypeScript e a API do Claude.
+
+### 1. Saiba o que o SDK já faz sozinho
+
+O SDK da Anthropic já tenta de novo, com espera crescente, quando recebe erros como limite de requisições, falha de conexão ou erro do servidor. O padrão é duas tentativas extras.
+
+```ts
+const claude = new Anthropic({ maxRetries: 2 }) // 2 já é o padrão; mude se quiser mais ou menos
+```
+
+Para muitos agentes, isso já basta. Você só precisa do que vem a seguir se quiser controlar as esperas, trocar de modelo ou impor um limite de tempo. O número de tentativas pode mudar em versões futuras do SDK, então confira a documentação da versão que você usa.
+
+### 2. Tente de novo só quando vale a pena
+
+Nem todo erro merece uma segunda chance. Se o servidor está sobrecarregado, esperar e tentar de novo ajuda. Se o pedido está errado (erro 400), repetir só vai gerar o mesmo erro.
+
+```ts
+const esperar = (ms: number) => new Promise<void>((resolver) => setTimeout(resolver, ms))
+
+function valeTentarDeNovo(erro: unknown): boolean {
+  if (erro instanceof Anthropic.RateLimitError) return true // limite de requisições
+  if (erro instanceof Anthropic.APIConnectionError) return true // a conexão caiu
+  if (erro instanceof Anthropic.APIError) return (erro.status ?? 0) >= 500 // problema do lado deles
+  return false // erro 400 e parentes: o pedido está errado, repetir não adianta
+}
+
+async function chamarComRetry(modelo: string, mensagem: string, limite: number): Promise<string> {
+  for (let tentativa = 0; tentativa < 3; tentativa++) {
+    const restante = limite - Date.now()
+    if (restante <= 0) throw new Error('acabou o tempo')
+
+    try {
+      const resposta = await claude.messages.create(
+        {
+          model: modelo,
+          max_tokens: 16000,
+          system: 'Você é o Pip, atendente da Pizzaria do Bairro. Responda em português, em poucas frases.',
+          messages: [{ role: 'user', content: mensagem }],
+        },
+        { maxRetries: 0, timeout: restante }, // o retry agora é nosso
+      )
+      return resposta.content
+        .filter((bloco) => bloco.type === 'text')
+        .map((bloco) => bloco.text)
+        .join('')
+    } catch (erro) {
+      if (!valeTentarDeNovo(erro) || tentativa === 2) throw erro
+      await esperar(1000 * 2 ** tentativa + Math.random() * 250) // 1 s, 2 s, 4 s... e um pouco de sorteio
+    }
+  }
+  throw new Error('não chega aqui')
+}
+```
+
+O que importa:
+
+- `valeTentarDeNovo` lista os erros que valem: limite de requisições, conexão e erros 5xx. Os tipos de erro vão do mais específico para o mais geral.
+- A espera dobra a cada tentativa (1 s, 2 s, 4 s), com um pouco de sorteio para que muitos clientes não tentem todos no mesmo instante.
+- `maxRetries: 0` na chamada desliga o retry do SDK, para ele não somar com o nosso.
+- `limite` é a hora em que o agente desiste. Ele vem do passo 5.
+
+### 3. Tenha uma lista de modelos reserva
+
+Se o modelo principal esgotou as tentativas, passe para o próximo da lista.
+
+```ts
+const MODELOS = ['claude-opus-5-5', 'claude-haiku-5-5']
+
+async function tentarOsModelos(mensagem: string, limite: number): Promise<string> {
+  let ultimoErro: unknown
+  for (const modelo of MODELOS) {
+    try {
+      return await chamarComRetry(modelo, mensagem, limite)
+    } catch (erro) {
+      ultimoErro = erro
+      console.warn(`modelo ${modelo} falhou, passando para o próximo`)
+    }
+  }
+  throw ultimoErro
+}
+```
+
+O reserva costuma ser um modelo menor e mais barato, que responde pior em perguntas difíceis, mas responde. Ele pode se comportar de um jeito um pouco diferente do principal; teste o Pip com ele antes de depender dele.
+
+### 4. Tenha uma resposta de emergência
+
+Se todos os modelos falharem, o cliente precisa ouvir algo.
+
+```ts
+const RESPOSTA_DE_EMERGENCIA = 'Estamos com um probleminha por aqui. Tente de novo em instantes ou ligue para a loja.'
+```
+
+Seja honesto e educado, diga o que a pessoa pode fazer (tentar de novo, ligar) e não prometa o que o agente não consegue cumprir.
+
+### 5. Ponha um limite de tempo total
+
+Sem um teto, três tentativas em dois modelos podem deixar o cliente esperando por minutos. Defina quanto tempo o agente tem no total e passe esse limite adiante.
+
+```ts
+const LIMITE_TOTAL_EM_MS = 20_000
+
+export async function atender(mensagem: string): Promise<string> {
+  const limite = Date.now() + LIMITE_TOTAL_EM_MS
+  try {
+    return await tentarOsModelos(mensagem, limite)
+  } catch {
+    return RESPOSTA_DE_EMERGENCIA
+  }
+}
+
+console.log(await atender('Até que horas vocês abrem?'))
+```
+
+A função `atender` calcula a hora limite uma vez, passa para todos os níveis e, se tudo falhar ou o tempo acabar, devolve a resposta de emergência. Vinte segundos é só um exemplo: escolha conforme a paciência dos seus clientes.
+
+<Aviso tipo="dica">
+Registre cada falha e cada troca de modelo. Se o reserva está respondendo muito, o principal tem um problema, e você quer saber antes de o cliente reclamar.
+</Aviso>
+
+## Erros comuns
+
+- **Tentar de novo em erro 400.** Pedido mal formado continua mal formado. Repetir só gasta tempo e dinheiro.
+- **Retry sem espera.** Cinco tentativas seguidas no mesmo segundo pioram a fila do servidor. Espere mais a cada vez.
+- **Somar o retry do SDK com o seu.** Se os dois estiverem ligados, três tentativas viram nove. Desligue um dos dois com `maxRetries: 0`.
+- **Não ter limite de tempo.** O cliente não espera para sempre. Defina um teto e, quando ele estourar, responda a emergência.
+- **Nunca testar o reserva.** Um plano B que nunca foi usado pode falhar na hora H. Teste de vez em quando, derrubando o principal de propósito.

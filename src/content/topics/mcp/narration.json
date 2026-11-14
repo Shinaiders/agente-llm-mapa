@@ -1,0 +1,12 @@
+{
+  "lines": [
+    "Pense numa tomada de parede. Qualquer aparelho com o plugue certo encaixa nela e funciona.",
+    "Agora o cliente pede uma calabresa grande para entregar. O modelo, sozinho, só consegue falar.",
+    "Ele diz que vai anotar, mas não anota nada. Falar não é fazer, e a cozinha nem fica sabendo.",
+    "Para agir, o Pip precisa de ferramentas, como uma que anota pedidos direto na cozinha.",
+    "O MCP é a tomada padrão do agente: um jeito combinado de ligar qualquer ferramenta, sem refazer a ligação.",
+    "Com o plugue encaixado, o modelo pede: anotar pedido. E o plugue liga direto na cozinha.",
+    "A cozinha anota e devolve o resultado: pedido número cento e vinte e sete.",
+    "O Pip confirma ao cliente. E se a ferramenta falhar? A próxima peça é o fallback, o plano B."
+  ]
+}

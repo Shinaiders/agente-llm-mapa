@@ -1,0 +1,219 @@
+## O que é
+
+Treinar para uma prova funciona assim: depois de fazer muitos exercícios, você responde no jeito certo sem precisar reler as instruções. Com o Pip pode ser parecido. Você mostra ao modelo muitos exemplos de pergunta e resposta no jeito da pizzaria, e ele passa a responder assim sozinho.
+
+Isso é **fine-tuning** ("ajuste fino"): continuar o treino de um modelo já pronto usando os seus exemplos. O modelo muda de verdade, ao contrário do bilhete de regras, que ele relê a cada conversa.
+
+Duas palavras que aparecem junto com o assunto. **LoRA** é uma técnica que treina só um pedacinho extra do modelo, em vez do modelo inteiro, o que costuma sair mais barato. **Destilação** é quando um modelo pequeno aprende com as respostas de um modelo grande. Os detalhes variam de ferramenta para ferramenta.
+
+## Para que serve
+
+Para ensinar um **jeito** de responder: tom de voz, formato, vocabulário da casa. Não é a ferramenta certa para ensinar **fatos** que mudam, como o cardápio de hoje.
+
+<AntesDepois
+  antes={'O Pip precisa de um bilhete enorme, com vários exemplos de como falar, e mesmo assim às vezes responde seco: "Sim, temos borda recheada."'}
+  depois={'Depois do treino, com um bilhete curto, ele responde no jeito da casa: "Tem sim! De catupiry, quer?"'}
+/>
+
+Treinar tem preço: custa tempo e dinheiro, precisa de bons exemplos, e o que o modelo aprendeu fica velho quando algo muda. Por isso é o último recurso, e não o primeiro.
+
+<OndeSeEncaixa />
+
+O fine-tuning acontece antes de o agente atender. Ele recebe os seus exemplos reais e entrega um modelo ajustado, que ocupa o lugar do modelo no mapa. Depois disso, o pedido do cliente passa pelas mesmas peças de antes.
+
+## Como montar
+
+Um aviso honesto: o SDK da Anthropic usado nos outros assuntos **não tem** um endpoint de fine-tuning. Por isso o código abaixo não finge chamar um treino. Ele faz o que você pode fazer agora, sem API nenhuma: decidir se precisa, preparar e validar os dados e medir o resultado.
+
+### 1. A pergunta que vem antes de tudo: você precisa mesmo?
+
+Siga esta ordem, parando na primeira que resolve:
+
+| Ordem | O que tentar | Quando resolve |
+| --- | --- | --- |
+| 1 | Melhorar o bilhete de regras | O modelo sabe fazer, mas você explicou mal |
+| 2 | RAG | Falta informação: cardápio, preços, políticas |
+| 3 | Exemplos dentro do prompt | O conteúdo está certo, mas o jeito de falar não |
+| 4 | Fine-tuning | Já mediu com evals, os exemplos no prompt não bastam ou ficam caros demais |
+
+```ts
+export interface Diagnostico {
+  /** o Pip erra por não saber algo (cardápio, preço, horário) */
+  faltaInformacao: boolean
+  /** o bilhete tem a regra, mas ele não a segue */
+  regrasMalSeguidas: boolean
+  /** o conteúdo está certo, mas o jeito de falar não é o da casa */
+  jeitoDeFalarNaoPega: boolean
+  /** você já colocou bons exemplos dentro do prompt */
+  jaTentouExemplosNoPrompt: boolean
+  /** você tem evals e centenas de exemplos reais aprovados por gente */
+  temEvalsEExemplos: boolean
+}
+
+export function proximoPasso(d: Diagnostico): string {
+  if (d.faltaInformacao) return 'Use RAG: dê ao modelo o documento certo na hora, em vez de ensinar de cor.'
+  if (d.regrasMalSeguidas) return 'Melhore o bilhete de regras: seja específico e rode as evals de novo.'
+  if (d.jeitoDeFalarNaoPega && !d.jaTentouExemplosNoPrompt) {
+    return 'Coloque três a cinco bons exemplos dentro do prompt e meça com as evals.'
+  }
+  if (d.jeitoDeFalarNaoPega && d.temEvalsEExemplos) return 'Aí sim vale considerar fine-tuning.'
+  return 'Antes de treinar, monte as evals e junte exemplos reais aprovados.'
+}
+```
+
+A função só escreve em código a tabela acima. Repare que `faltaInformacao` vem primeiro: treinar não é um bom jeito de ensinar o cardápio, porque ele muda.
+
+### 2. Monte o conjunto de treino em JSONL
+
+Um conjunto de treino costuma ser um arquivo **JSONL**: um JSON por linha, cada linha com uma conversa de exemplo (mensagens de sistema, do cliente e a resposta ideal). O código abaixo monta e valida esse arquivo a partir de conversas reais do Pip que uma pessoa aprovou.
+
+```ts
+export interface Mensagem {
+  role: 'system' | 'user' | 'assistant'
+  content: string
+}
+
+export interface ExemploDeTreino {
+  messages: Mensagem[]
+}
+
+export interface ConversaDoPip {
+  id: string
+  pergunta: string
+  resposta: string
+  /** uma pessoa leu e aprovou esta resposta */
+  aprovadaPorGente: boolean
+}
+
+const BILHETE_CURTO = 'Você é o Pip, atendente da Pizzaria do Bairro.'
+
+export function montarExemplo(conversa: ConversaDoPip): ExemploDeTreino {
+  return {
+    messages: [
+      { role: 'system', content: BILHETE_CURTO },
+      { role: 'user', content: conversa.pergunta.trim() },
+      { role: 'assistant', content: conversa.resposta.trim() },
+    ],
+  }
+}
+
+export function validarExemplo(exemplo: ExemploDeTreino): string[] {
+  const problemas: string[] = []
+  const papeis = exemplo.messages.map((m) => m.role)
+  if (papeis[papeis.length - 1] !== 'assistant') problemas.push('o último papel precisa ser assistant')
+  if (!papeis.includes('user')) problemas.push('falta uma mensagem do cliente')
+  if (exemplo.messages.some((m) => m.content.trim() === '')) problemas.push('há mensagem vazia')
+  return problemas
+}
+
+export async function escreverJsonl(conversas: ConversaDoPip[], arquivo: string): Promise<number> {
+  const linhas: string[] = []
+  for (const conversa of conversas) {
+    if (!conversa.aprovadaPorGente) continue
+    const exemplo = montarExemplo(conversa)
+    const problemas = validarExemplo(exemplo)
+    if (problemas.length > 0) {
+      console.warn(`Conversa ${conversa.id} descartada: ${problemas.join('; ')}`)
+      continue
+    }
+    linhas.push(JSON.stringify(exemplo)) // uma linha de JSON por exemplo
+  }
+  await writeFile(arquivo, linhas.join('\n') + '\n')
+  return linhas.length
+}
+```
+
+O que importa aqui:
+
+- `aprovadaPorGente` filtra o que entra. O modelo aprende o que você mostrar, inclusive os erros.
+- O bilhete do exemplo é curto de propósito: é assim que o Pip vai trabalhar depois do treino.
+- `validarExemplo` pega problemas antes de você gastar com o treino. Cada provedor tem as suas próprias regras de formato.
+
+<Aviso tipo="cuidado">
+Troque nomes, telefones e endereços reais por dados fictícios antes de usar conversas de clientes. Dado pessoal em arquivo de treino é difícil de tirar depois.
+</Aviso>
+
+### 3. Separe uma parte dos exemplos para teste
+
+Reserve uma fatia, por exemplo vinte por cento, que o modelo **nunca vê** no treino. É com ela que você descobre se ele aprendeu o jeito ou só decorou os exemplos.
+
+```ts
+function numeroDoId(id: string): number {
+  let n = 0
+  for (const letra of id) n = (n * 31 + letra.charCodeAt(0)) % 1000
+  return n
+}
+
+export function separar(conversas: ConversaDoPip[], porcentagemDeTeste = 20) {
+  const treino: ConversaDoPip[] = []
+  const teste: ConversaDoPip[] = []
+  for (const conversa of conversas) {
+    // o mesmo id sempre cai do mesmo lado, mesmo se você gerar o arquivo de novo
+    if (numeroDoId(conversa.id) % 100 < porcentagemDeTeste) teste.push(conversa)
+    else treino.push(conversa)
+  }
+  return { treino, teste }
+}
+
+export async function prepararArquivos(arquivoDeConversas: string): Promise<void> {
+  const conversas = JSON.parse(await readFile(arquivoDeConversas, 'utf8')) as ConversaDoPip[]
+  const { treino, teste } = separar(conversas)
+  const nTreino = await escreverJsonl(treino, 'treino.jsonl')
+  const nTeste = await escreverJsonl(teste, 'teste.jsonl')
+  console.log(`treino.jsonl: ${nTreino} exemplos. teste.jsonl: ${nTeste} exemplos (o modelo não vê esses).`)
+}
+```
+
+A separação usa o `id` da conversa, então o mesmo exemplo sempre cai do mesmo lado, mesmo se você gerar os arquivos de novo.
+
+### 4. Onde o treino acontece: confira o provedor
+
+O treino acontece fora do seu código: em **modelos abertos**, que você treina com ferramentas próprias, ou em **provedores que oferecem o serviço**. Cada um tem o seu formato de arquivo, os modelos que aceita e o seu preço, e isso muda com o tempo. Confira a documentação do provedor escolhido antes de preparar os dados. Também confira se o modelo que você usa hoje permite ajuste.
+
+Você pode fazer a conta antes de contratar. Copie o preço da página do provedor e passe para a função:
+
+```ts
+export function estimarCusto(
+  exemplos: ExemploDeTreino[],
+  precoPorMilhaoDeTokens: number, // copie da página de preços do provedor que você escolheu
+  passadasPeloConjunto: number, // quantas vezes o treino lê o conjunto inteiro
+): number {
+  const caracteres = exemplos.flatMap((e) => e.messages).reduce((soma, m) => soma + m.content.length, 0)
+  const tokensAproximados = caracteres / 4 // regra de bolso para texto em português; o provedor conta de verdade
+  return (tokensAproximados * passadasPeloConjunto * precoPorMilhaoDeTokens) / 1_000_000
+}
+```
+
+A estimativa de tokens é só uma regra de bolso. O provedor mostra o número real.
+
+### 5. Como saber se valeu: as mesmas evals, antes e depois
+
+Rode a prova do assunto Evals duas vezes: com o modelo base e com o treinado, usando o arquivo de teste que o treino não viu.
+
+```ts
+export async function valeu(
+  rodarProva: (modelo: string) => Promise<number>, // a prova do assunto Evals, parametrizada pelo modelo
+  modeloBase: string,
+  modeloTreinado: string,
+  ganhoMinimo = 0.1,
+): Promise<boolean> {
+  const antes = await rodarProva(modeloBase)
+  const depois = await rodarProva(modeloTreinado)
+  console.log(`Nota antes: ${antes}. Nota depois: ${depois}.`)
+  return depois - antes >= ganhoMinimo
+}
+```
+
+Se o ganho não passar do mínimo que você definiu, o treino não se pagou. Lembre também de comparar com a alternativa mais barata: o bilhete bom mais exemplos no prompt.
+
+<Aviso tipo="dica">
+Sempre que o cardápio ou as regras mudarem, o modelo treinado não sabe. Mantenha o que muda no RAG ou no bilhete e use o treino só para o que é estável, como o tom de voz.
+</Aviso>
+
+## Erros comuns
+
+- **Treinar antes de tentar o básico.** Bilhete melhor, RAG e exemplos no prompt resolvem a maioria dos casos por muito menos.
+- **Treinar para ensinar fatos.** Preços e cardápio mudam. Coloque isso no RAG, não no modelo.
+- **Exemplos ruins ou poucos.** O modelo copia o que vê, inclusive respostas erradas. Use só respostas aprovadas por gente.
+- **Testar com os mesmos exemplos do treino.** Sem uma parte separada, você mede memória e não aprendizado.
+- **Não medir antes e depois.** Sem as mesmas evals nos dois modelos, você não sabe se o treino ajudou.

@@ -1,0 +1,12 @@
+{
+  "lines": [
+    "Você já fez prova com consulta? Quem abre o livro na hora acerta muito mais do que quem chuta.",
+    "O Pip está numa prova assim. O cliente pergunta: quanto custa a quatro queijos grande?",
+    "Sem consultar nada, o modelo chutaria um preço. Um chute dito com confiança continua sendo chute.",
+    "Com a técnica chamada RAG, o Pip primeiro transforma a pergunta numa busca e vai até o cardápio.",
+    "O cardápio já foi cortado em pedacinhos. A busca traz só os dois ou três mais parecidos com a pergunta.",
+    "Esses trechos entram no pedido, junto com a pergunta. É como colar a página certa do livro na prova.",
+    "Agora o modelo responde com o cardápio na frente: a quatro queijos grande custa cinquenta e oito reais.",
+    "A resposta ainda mostra de onde veio. Mas só consultar não basta: a próxima peça é o MCP, as ferramentas."
+  ]
+}
