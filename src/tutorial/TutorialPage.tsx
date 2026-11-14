@@ -1,6 +1,7 @@
 import { MDXProvider } from '@mdx-js/react'
 import { ArrowLeft, ArrowRight } from 'lucide-react'
 import type { ReactNode } from 'react'
+import { HiatoolsInvite } from '../brand/HiatoolsCta'
 import { getLayer } from '../content/layers'
 import { getTopic } from '../content/registry'
 import type { TopicBundle } from '../content/topics'
@@ -49,6 +50,7 @@ export function TutorialPage({ bundle, onBack, autoPlay, onSceneEnded, banner }:
           <MDXProvider components={mdxComponents}>
             <Tutorial />
           </MDXProvider>
+          <HiatoolsInvite />
           <h2>Próximo assunto</h2>
           {next ? (
             <a className="tutorial-next" href={formatHash({ name: 'topic', id: next.id, journey: false })}>

@@ -14,6 +14,10 @@
 }
 .map-brand h1 {
   margin: 0;
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 2px 10px;
   font-size: 21px;
   font-weight: 700;
   line-height: 1.1;
@@ -26,7 +30,9 @@
 .map-actions {
   margin-left: auto;
   display: flex;
-  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px 10px;
 }
 
 .scenario-bar {

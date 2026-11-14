@@ -1,0 +1,105 @@
+.hia-byline {
+  font-size: 12.5px;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+.hia-byline a {
+  color: var(--text);
+  font-family: var(--font-display);
+  font-weight: 650;
+  text-decoration: none;
+  border-bottom: 1px solid var(--line);
+}
+.hia-byline a:hover {
+  border-color: var(--paper);
+}
+.hia-byline b {
+  color: var(--layer-cerebro);
+  font-weight: 750;
+}
+
+.hia-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 38px;
+  padding: 0 14px 0 16px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--bg-raised);
+  color: var(--text);
+  font-size: 14.5px;
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+  transition:
+    border-color 0.2s,
+    transform 0.25s var(--ease-out);
+}
+.hia-button:hover {
+  border-color: var(--paper);
+  transform: translateY(-2px);
+}
+
+.hia-invite {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px 28px;
+  flex-wrap: wrap;
+  margin: 64px 0 0;
+  padding: 22px 24px;
+  border-radius: 16px;
+  background: var(--paper);
+  color: var(--paper-ink);
+}
+.hia-invite > div {
+  flex: 1 1 300px;
+}
+.hia-invite strong {
+  display: block;
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 680;
+  line-height: 1.2;
+  text-wrap: balance;
+}
+.hia-invite p {
+  margin: 8px 0 0;
+  font-size: 15.5px;
+  line-height: 1.5;
+}
+.hia-invite-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  height: 46px;
+  padding: 0 20px;
+  border-radius: 999px;
+  background: var(--paper-ink);
+  color: var(--paper);
+  font-weight: 650;
+  font-size: 15.5px;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: transform 0.25s var(--ease-out);
+}
+.hia-invite-link:hover {
+  transform: translateY(-2px);
+}
+.hia-invite-link:focus-visible {
+  outline-color: var(--paper-ink);
+}
+
+@media (max-width: 719px) {
+  .hia-button {
+    height: 36px;
+    font-size: 14px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hia-button,
+  .hia-invite-link {
+    transition: none;
+  }
+}

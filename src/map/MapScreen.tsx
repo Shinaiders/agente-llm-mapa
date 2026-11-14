@@ -1,5 +1,6 @@
 import { RotateCcw } from 'lucide-react'
 import type { ReactNode } from 'react'
+import { HiatoolsButton, HiatoolsByline } from '../brand/HiatoolsCta'
 import { getTopic } from '../content/registry'
 import type { TopicId, TopicMeta } from '../content/types'
 import { getScenario } from '../sim/scenarios'
@@ -68,11 +69,16 @@ export function MapScreen({ onOpen, sim: external, actions, notice, transit }: P
     <div className="map-screen">
       <header className="map-top">
         <div className="map-brand">
-          <h1>Mapa do Agente</h1>
+          <h1>
+            Mapa do Agente <HiatoolsByline />
+          </h1>
           <p>Siga um pedido por dentro do Pip. Clique numa peça para abrir o tutorial; desligue uma para ver o que muda.</p>
         </div>
         <ScenarioBar value={sim.scenario} onChange={sim.setScenario} />
-        {actions && <div className="map-actions">{actions}</div>}
+        <div className="map-actions">
+          {actions}
+          <HiatoolsButton />
+        </div>
       </header>
       {notice}
       <div className="map-stage">
