@@ -1,9 +1,5 @@
-import { MapView } from './map/MapView'
+import { MapScreen } from './map/MapScreen'
 
 export default function App() {
-  return (
-    <div className="h-full">
-      <MapView onOpen={() => {}} />
-    </div>
-  )
+  return <MapScreen onOpen={() => {}} />
 }

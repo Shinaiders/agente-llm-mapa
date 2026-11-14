@@ -1,0 +1,66 @@
+.order-card {
+  --stamp: #c9a25a;
+  position: relative;
+  background: var(--paper);
+  color: var(--paper-ink);
+  border-radius: 6px;
+  box-shadow:
+    0 10px 24px -10px rgb(0 0 0 / 0.7),
+    0 0 0 1px rgb(0 0 0 / 0.08) inset;
+  display: flex;
+  flex-direction: column;
+}
+.order-card[data-state='ok'] {
+  --stamp: #4f9d58;
+}
+.order-card[data-state='blocked'] {
+  --stamp: #c9861a;
+}
+.order-card[data-state='error'] {
+  --stamp: #c94b36;
+}
+.order-card-tab {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 5px;
+  border-radius: 6px 6px 0 0;
+  background: var(--stamp);
+}
+.order-card-sm {
+  width: 44px;
+  height: 32px;
+  padding: 11px 7px 0;
+  gap: 5px;
+  box-shadow:
+    0 0 0 4px color-mix(in oklab, var(--paper) 22%, transparent),
+    0 8px 22px -6px rgb(0 0 0 / 0.8);
+}
+.order-card-line {
+  height: 3px;
+  border-radius: 2px;
+  background: color-mix(in oklab, var(--paper-ink) 34%, transparent);
+}
+.order-card-line:last-child {
+  width: 62%;
+}
+.order-card-lg {
+  min-width: 190px;
+  max-width: 300px;
+  padding: 16px 16px 14px;
+  gap: 4px;
+}
+.order-card-label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  opacity: 0.55;
+}
+.order-card-text {
+  font-family: var(--font-display);
+  font-weight: 560;
+  font-size: 17px;
+  line-height: 1.25;
+}

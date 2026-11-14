@@ -14,7 +14,7 @@ export interface Box {
   h: number
 }
 
-export const MAP_SIZE = { w: 1760, h: 906 }
+export const MAP_SIZE = { w: 1760, h: 808 }
 
 /** estação = nó do caminho principal, com trecho de código; ficha = os demais */
 export const STATION = { w: 230, h: 112 }
@@ -24,7 +24,7 @@ const TERMINAL = { w: 140, h: 36 }
 // Ordem das faixas no mapa (de cima para baixo), escolhida para o caminho
 // principal fazer uma volta só: entra pela porta, sobe ao caderno, desce ao cérebro.
 const LANE_ORDER: LayerId[] = ['seguranca', 'qualidade', 'confiabilidade', 'cerebro', 'conhecimento', 'acao']
-const LANE_H: Record<LayerId, number> = { seguranca: 100, qualidade: 150, confiabilidade: 150, cerebro: 150, conhecimento: 150, acao: 150 }
+const LANE_H: Record<LayerId, number> = { seguranca: 84, qualidade: 136, confiabilidade: 136, cerebro: 136, conhecimento: 136, acao: 136 }
 const TOP = 28
 
 export const LANES: { id: LayerId; label: string; colorVar: string; y: number; h: number }[] = (() => {
@@ -62,13 +62,13 @@ for (const lane of LANES) {
     boxes.set(t.id, { x: COL[STATION_COL[t.id]], y: lane.y + (lane.h - STATION.h) / 2, ...STATION })
   }
   const chips = inLane.filter((t) => t.status !== 'ready')
-  const single = lane.h < 150 // faixa baixa: uma fileira só, a partir da esquerda
+  const single = lane.h < 136 // faixa baixa: uma fileira só, a partir da esquerda
   const perRow = single ? chips.length : Math.ceil(chips.length / 2)
   chips.forEach((t, i) => {
     const row = single ? 0 : Math.floor(i / perRow)
     const col = single ? i : i % perRow
     const x = (single ? COL[0] : CHIPS_X) + col * CHIP_STEP
-    const y = single ? lane.y + (lane.h - CHIP.h) / 2 : lane.y + 14 + row * (CHIP.h + 10)
+    const y = single ? lane.y + (lane.h - CHIP.h) / 2 : lane.y + 7 + row * (CHIP.h + 10)
     boxes.set(t.id, { x, y, ...CHIP })
   })
 }
@@ -134,7 +134,7 @@ const ROUTES: Record<string, Pts> = {
   'guardrails-out>resposta': [[G.x, OUT_Y], [TERM_X, OUT_Y]],
   // bastidores (ligações pontilhadas)
   'evals>llm': [[cx(E), E.y + E.h], [cx(E), L.y + 36], [L.x + L.w, L.y + 36]],
-  'fine-tuning>llm': [[cx(FT), FT.y], [cx(FT), FT.y - 19], [L.x + 40, FT.y - 19], [L.x + 40, L.y + L.h]],
+  'fine-tuning>llm': [[cx(FT), FT.y], [cx(FT), FT.y - 12], [L.x + 40, FT.y - 12], [L.x + 40, L.y + L.h]],
 }
 
 const fmt = (n: number) => String(Math.round(n * 10) / 10)
