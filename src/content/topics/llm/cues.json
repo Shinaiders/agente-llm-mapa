@@ -1,14 +1,50 @@
 [
   {
     "index": 0,
-    "text": "Imagina um amigo que leu uma biblioteca inteira.",
+    "text": "Imagina um amigo que leu uma biblioteca inteira, milhões de livros.",
     "start": 0,
-    "end": 3.07
+    "end": 4.31
   },
   {
     "index": 1,
-    "text": "Ele não decorou os livros, mas ficou muito bom em adivinhar a próxima palavra.",
-    "start": 3.32,
-    "end": 8.21
+    "text": "Ele não decorou nada, mas ficou craque numa coisa: adivinhar qual palavra vem depois.",
+    "start": 4.56,
+    "end": 9.88
+  },
+  {
+    "index": 2,
+    "text": "Esse amigo é o modelo de linguagem, o cérebro do nosso agente.",
+    "start": 10.13,
+    "end": 14.01
+  },
+  {
+    "index": 3,
+    "text": "Quando o pedido do cliente chega, o modelo quebra o texto em pedacinhos chamados tokens.",
+    "start": 14.26,
+    "end": 19.57
+  },
+  {
+    "index": 4,
+    "text": "Aí ele escreve a resposta um pedacinho de cada vez, sempre escolhendo o que faz mais sentido.",
+    "start": 19.82,
+    "end": 25.52
+  },
+  {
+    "index": 5,
+    "text": "Antes de tudo, ele lê um bilhete com as regras: você é o Pip, atendente da pizzaria.",
+    "start": 25.77,
+    "end": 30.83
+  },
+  {
+    "index": 6,
+    "text": "Mas atenção: ele só sabe o que leu. O cardápio de hoje, por exemplo, ele não conhece.",
+    "start": 31.08,
+    "end": 36.19
+  },
+  {
+    "index": 7,
+    "text": "Por isso o cérebro sozinho não basta. As outras peças do mapa existem para ajudar.",
+    "start": 36.44,
+    "end": 41.6
   }
 ]

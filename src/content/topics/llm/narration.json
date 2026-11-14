@@ -1,6 +1,12 @@
 {
   "lines": [
-    "Imagina um amigo que leu uma biblioteca inteira.",
-    "Ele não decorou os livros, mas ficou muito bom em adivinhar a próxima palavra."
+    "Imagina um amigo que leu uma biblioteca inteira, milhões de livros.",
+    "Ele não decorou nada, mas ficou craque numa coisa: adivinhar qual palavra vem depois.",
+    "Esse amigo é o modelo de linguagem, o cérebro do nosso agente.",
+    "Quando o pedido do cliente chega, o modelo quebra o texto em pedacinhos chamados tokens.",
+    "Aí ele escreve a resposta um pedacinho de cada vez, sempre escolhendo o que faz mais sentido.",
+    "Antes de tudo, ele lê um bilhete com as regras: você é o Pip, atendente da pizzaria.",
+    "Mas atenção: ele só sabe o que leu. O cardápio de hoje, por exemplo, ele não conhece.",
+    "Por isso o cérebro sozinho não basta. As outras peças do mapa existem para ajudar."
   ]
 }

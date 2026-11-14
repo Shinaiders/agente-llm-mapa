@@ -15,25 +15,21 @@
   container-type: size;
 }
 .scene-caption {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  padding: 0 6% 3.2%;
   display: flex;
+  align-items: center;
   justify-content: center;
-  pointer-events: none;
+  min-height: 4.1em;
+  padding: 10px 20px;
+  border-top: 1px solid var(--line-soft);
+  background: var(--bg-sunken);
+  font-size: clamp(15px, 2vw, 19px);
 }
 .scene-caption p {
   margin: 0;
-  max-width: 44ch;
+  max-width: 52ch;
   text-align: center;
-  font-size: clamp(14px, 2.5cqw, 21px);
-  line-height: 1.32;
+  line-height: 1.35;
   text-wrap: balance;
-  padding: 0.45em 0.9em;
-  border-radius: 10px;
-  background: rgb(12 9 7 / 0.84);
   animation: caption-in 0.3s var(--ease-out);
 }
 @keyframes caption-in {
@@ -161,4 +157,7 @@
   .scene-caption p {
     animation: none;
   }
+}
+.scene-caption[hidden] {
+  display: none;
 }

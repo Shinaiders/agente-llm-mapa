@@ -73,9 +73,9 @@ export function SceneStage({ topicId, Scene, cues, audioSrc, autoPlay, onEnded }
             Sem som: seguindo pela legenda
           </p>
         )}
-        <div className="scene-caption" aria-live="polite">
-          {captionsOn && n.caption && <p key={n.step}>{n.caption}</p>}
-        </div>
+      </div>
+      <div className="scene-caption" aria-live="polite" hidden={!captionsOn}>
+        {captionsOn && n.caption && <p key={n.step}>{n.caption}</p>}
       </div>
       <SceneControls narration={n} cues={cues} captionsOn={captionsOn} onToggleCaptions={() => setCaptionsOn((v) => !v)} />
     </figure>

@@ -1,0 +1,112 @@
+## O que é
+
+Um **LLM** (sigla em inglês para "modelo de linguagem grande") é um programa que leu uma quantidade enorme de texto e aprendeu a continuar frases. Você entrega um texto, ele devolve o que faz mais sentido vir em seguida, um pedacinho de cada vez. Esses pedacinhos se chamam **tokens**.
+
+No nosso agente, o LLM é o cérebro do Pip. É ele que lê o que o cliente escreveu e decide o que responder.
+
+Duas coisas para guardar desde já:
+
+- **Ele não pensa como gente.** Ele calcula qual continuação é mais provável. Na maior parte do tempo isso dá respostas boas. Às vezes dá uma resposta errada dita com toda a confiança.
+- **Ele só sabe o que leu no treino e o que você colocar na conversa.** O cardápio de hoje, o pedido da Ana, o horário da sua pizzaria: nada disso ele conhece, a menos que você conte.
+
+## Para que serve
+
+Para entender texto escrito do jeito que as pessoas escrevem, sem você precisar prever cada frase.
+
+<AntesDepois
+  antes={'Um programa comum só entende o que você programou. "Abre que horas?" funciona; "tão aberto ainda?" já não funciona.'}
+  depois={'Com um LLM, as duas perguntas chegam na mesma resposta, porque ele entende o sentido e não só as palavras exatas.'}
+/>
+
+Sozinho, porém, ele é só um cérebro numa sala vazia: não consulta o cardápio, não anota pedido e não desconfia de golpe. É por isso que o mapa tem outras peças.
+
+<OndeSeEncaixa />
+
+O pedido chega ao LLM depois de passar pela porta (guardrails) e pelo caderno de respostas prontas (cache). Do LLM saem os pedidos de ajuda para o RAG e para as ferramentas, e é para ele que essas respostas voltam.
+
+## Como montar
+
+Você vai fazer o Pip responder à primeira pergunta. Os exemplos usam TypeScript e a API do Claude.
+
+### 1. Instale o SDK
+
+```bash
+npm install @anthropic-ai/sdk
+```
+
+### 2. Guarde a chave fora do código
+
+A chave da API é como a senha do cofre. Ela fica numa variável de ambiente, nunca escrita no arquivo.
+
+```bash
+export ANTHROPIC_API_KEY="sua-chave-aqui"
+```
+
+### 3. Escreva o bilhete de regras
+
+O **system prompt** é o bilhete que o modelo lê antes de cada conversa. É aqui que o Pip vira o Pip.
+
+```ts
+const REGRAS_DO_PIP = `Você é o Pip, atendente da Pizzaria do Bairro.
+Responda em português, com simpatia e em poucas frases.
+A pizzaria abre todo dia das 18h às 23h.
+Se não souber alguma coisa, diga que vai verificar. Nunca invente.`
+```
+
+### 4. Faça a chamada
+
+```ts
+import Anthropic from '@anthropic-ai/sdk'
+
+const claude = new Anthropic() // lê a chave de ANTHROPIC_API_KEY
+
+export async function perguntarAoPip(pergunta: string): Promise<string> {
+  const resposta = await claude.messages.create({
+    model: 'claude-opus-5-5',
+    max_tokens: 16000,
+    system: REGRAS_DO_PIP,
+    output_config: { effort: 'low' },
+    messages: [{ role: 'user', content: pergunta }],
+  })
+
+  if (resposta.stop_reason === 'refusal') {
+    return 'Não posso ajudar com isso. Quer fazer um pedido?'
+  }
+
+  // A resposta vem em blocos. Só os blocos do tipo "text" têm o texto para mostrar.
+  return resposta.content
+    .filter((bloco) => bloco.type === 'text')
+    .map((bloco) => bloco.text)
+    .join('')
+}
+
+console.log(await perguntarAoPip('Oi, Pip! Até que horas vocês ficam abertos hoje?'))
+```
+
+O que cada linha da chamada faz:
+
+- `model` escolhe qual cérebro usar.
+- `max_tokens` é o tamanho máximo da resposta. Se for pequeno demais, a resposta sai cortada no meio.
+- `system` é o bilhete de regras.
+- `output_config.effort` diz quanto o modelo deve se esforçar pensando. Para uma pergunta simples de atendimento, `low` basta e sai mais rápido e mais barato. Para tarefas difíceis, suba para `medium` ou `high`.
+- `messages` é a conversa. Aqui tem só a pergunta do cliente.
+
+<Aviso tipo="dica">
+Em tutoriais mais antigos você vai ver um ajuste chamado `temperature`, que controlava o quanto a resposta variava. Os modelos atuais do Claude não aceitam mais esse ajuste e devolvem erro se você enviar. Hoje o controle é o `effort`, e o estilo da resposta você define no bilhete de regras.
+</Aviso>
+
+### 5. Rode e confira
+
+Você deve ver algo como "Hoje a gente fica aberto até as 23h!". Se rodar duas vezes, as palavras podem mudar um pouco. Isso é normal: o modelo escolhe entre continuações prováveis, e nem sempre escolhe a mesma.
+
+<Aviso tipo="cuidado">
+A API não guarda a conversa. Se o cliente mandar uma segunda mensagem, você precisa enviar de novo tudo o que já foi dito, dentro de `messages`. O assunto "Memória" mostra como fazer isso direito.
+</Aviso>
+
+## Erros comuns
+
+- **Deixar a chave no código.** Quem vir o arquivo pode usar a sua conta. Use variável de ambiente.
+- **Ler `resposta.content[0].text` direto.** A resposta pode ter mais de um bloco, e o primeiro nem sempre é texto. Filtre pelos blocos de tipo `text`, como no exemplo.
+- **Bilhete de regras vago.** "Seja útil" não diz nada. Diga quem ele é, o que sabe e o que fazer quando não sabe.
+- **Confiar em tudo o que ele diz.** Pergunte ao Pip o preço de uma pizza e ele pode inventar um número. Ele não leu o seu cardápio. O assunto "RAG" resolve isso.
+- **Esquecer que ele não lembra.** Cada chamada começa do zero, só com o que estiver em `messages`.
