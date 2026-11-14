@@ -1,0 +1,97 @@
+@import 'tailwindcss';
+@import '@fontsource-variable/bricolage-grotesque';
+@import '@fontsource-variable/atkinson-hyperlegible-next';
+@import '@fontsource-variable/jetbrains-mono';
+
+/* Pizzaria à noite: fundo de forno apagado, papel de comanda como ponto de luz,
+   uma cor de ingrediente por camada. */
+:root {
+  --bg: #15100d;
+  --bg-raised: #1f1814;
+  --bg-sunken: #100c0a;
+  --line: #3b2f27;
+  --line-soft: #2a211c;
+  --text: #f4ebdd;
+  --text-muted: #ab9c8c;
+  --paper: #f6ecd6;
+  --paper-ink: #2a1d14;
+
+  --layer-cerebro: #ff7a59; /* tomate */
+  --layer-conhecimento: #f2c14e; /* queijo */
+  --layer-acao: #7fca84; /* manjericão */
+  --layer-confiabilidade: #63b8de; /* aço da bancada */
+  --layer-seguranca: #ea6a88; /* pimenta */
+  --layer-qualidade: #b9a0f2; /* cebola roxa */
+
+  --ok: #7fca84;
+  --blocked: #f2c14e;
+  --wrong: #ea6a88;
+  --error: #ff7a59;
+
+  --font-display: 'Bricolage Grotesque Variable', system-ui, sans-serif;
+  --font-body: 'Atkinson Hyperlegible Next Variable', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono Variable', ui-monospace, monospace;
+
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  color-scheme: dark;
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-raised: var(--bg-raised);
+  --color-sunken: var(--bg-sunken);
+  --color-line: var(--line);
+  --color-line-soft: var(--line-soft);
+  --color-ink: var(--text);
+  --color-muted: var(--text-muted);
+  --color-paper: var(--paper);
+  --color-paper-ink: var(--paper-ink);
+  --font-display: var(--font-display);
+  --font-sans: var(--font-body);
+  --font-mono: var(--font-mono);
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--font-display);
+  text-wrap: balance;
+  letter-spacing: -0.01em;
+}
+
+:focus-visible {
+  outline: 2px solid var(--paper);
+  outline-offset: 3px;
+  border-radius: 6px;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+  }
+}
