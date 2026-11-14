@@ -1,0 +1,45 @@
+import {
+  Activity, BadgeCheck, BookOpen, Bot, Boxes, BrainCircuit, CircleDollarSign, ClipboardCheck, Coins, Compass, DoorOpen,
+  Dumbbell, EyeOff, FileJson, Ghost, GitBranch, Hand, KeyRound, LayoutList, Lightbulb, ListChecks, Lock, type LucideIcon,
+  MessageSquareWarning, NotebookPen, Plug, Radio, RefreshCw, Repeat, ScrollText, ShieldAlert, Sparkles, Split, Database,
+  PackageSearch, Wrench, Users, Box,
+} from 'lucide-react'
+
+export const ICONS: Record<string, LucideIcon> = {
+  llm: BrainCircuit,
+  tokens: Coins,
+  prompt: ScrollText,
+  'saida-estruturada': FileJson,
+  alucinacao: Ghost,
+  raciocinio: Lightbulb,
+  'escolha-do-modelo': Compass,
+  embeddings: Sparkles,
+  'banco-vetorial': Database,
+  rag: BookOpen,
+  memoria: NotebookPen,
+  'engenharia-de-contexto': LayoutList,
+  'fine-tuning': Dumbbell,
+  tools: Wrench,
+  mcp: Plug,
+  'loop-do-agente': Repeat,
+  planejamento: ListChecks,
+  'multi-agentes': Users,
+  guardrails: DoorOpen,
+  fallback: RefreshCw,
+  'roteador-de-modelos': Split,
+  'prompt-injection': MessageSquareWarning,
+  permissoes: Lock,
+  segredos: KeyRound,
+  privacidade: EyeOff,
+  'seguranca-de-ferramentas': PackageSearch,
+  sandbox: Box,
+  'humano-no-meio': Hand,
+  'limites-de-gasto': CircleDollarSign,
+  evals: ClipboardCheck,
+  observabilidade: Activity,
+  cache: Boxes,
+  streaming: Radio,
+}
+
+export const FALLBACK_ICON: LucideIcon = Bot
+export { BadgeCheck, GitBranch, ShieldAlert }
