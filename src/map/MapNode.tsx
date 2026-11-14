@@ -11,13 +11,14 @@ interface Props {
   off?: boolean
   onOpen(id: string): void
   onHover?(id: string | null): void
+  onFocusChange?(id: string | null): void
   /** controles extras ao lado do nó (ex.: interruptor) */
   extra?: ReactNode
   /** balão mostrado acima do nó (ex.: o que entrou e saiu neste salto) */
   bubble?: ReactNode
 }
 
-export function MapNode({ topic, style, dimmed, active, off, onOpen, onHover, extra, bubble }: Props) {
+export function MapNode({ topic, style, dimmed, active, off, onOpen, onHover, onFocusChange, extra, bubble }: Props) {
   const layer = getLayer(topic.layer)
   const Icon = ICONS[topic.id] ?? FALLBACK_ICON
   const ready = topic.status === 'ready'
@@ -42,8 +43,8 @@ export function MapNode({ topic, style, dimmed, active, off, onOpen, onHover, ex
         onClick={() => ready && onOpen(topic.id)}
         onMouseEnter={() => onHover?.(topic.id)}
         onMouseLeave={() => onHover?.(null)}
-        onFocus={() => onHover?.(topic.id)}
-        onBlur={() => onHover?.(null)}
+        onFocus={() => onFocusChange?.(topic.id)}
+        onBlur={() => onFocusChange?.(null)}
       >
         <span className="node-head">
           <Icon className="node-icon" size={ready ? 17 : 15} strokeWidth={1.9} aria-hidden="true" />

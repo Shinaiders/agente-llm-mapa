@@ -184,3 +184,21 @@
   align-items: flex-end;
   gap: 0.35cqw;
 }
+
+/* dentro de uma cena, o cartão do pedido escala junto com o palco */
+.sk-root .order-card-lg {
+  min-width: 20cqw;
+  max-width: 30cqw;
+  padding: 1.7cqw 1.7cqw 1.5cqw;
+  border-radius: 0.7cqw;
+}
+.sk-root .order-card-lg .order-card-tab {
+  height: 0.55cqw;
+  border-radius: 0.7cqw 0.7cqw 0 0;
+}
+.sk-root .order-card-label {
+  font-size: 1.05cqw;
+}
+.sk-root .order-card-text {
+  font-size: 1.85cqw;
+}

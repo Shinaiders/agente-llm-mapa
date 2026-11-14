@@ -7,9 +7,8 @@
 .map-top {
   display: flex;
   align-items: center;
-  gap: 20px 28px;
-  flex-wrap: wrap;
-  padding: 14px 20px;
+  gap: 12px 22px;
+  padding: 12px 20px;
   border-bottom: 1px solid var(--line-soft);
   background: var(--bg);
 }
@@ -34,14 +33,16 @@
   display: flex;
   gap: 6px;
   flex-wrap: wrap;
+  flex: 1;
+  min-width: 0;
 }
 .scenario-pill {
   border: 1px solid var(--line);
   background: transparent;
   color: var(--text-muted);
   border-radius: 999px;
-  padding: 6px 13px;
-  font-size: 13.5px;
+  padding: 5px 11px;
+  font-size: 13px;
   transition:
     background 0.2s,
     color 0.2s,
@@ -317,6 +318,10 @@
   .map-top {
     padding: 12px 16px;
     gap: 12px;
+    flex-wrap: wrap;
+  }
+  .scenario-bar {
+    flex: none;
   }
   .scenario-bar {
     flex-wrap: nowrap;
@@ -370,5 +375,5 @@
 }
 
 .map-brand {
-  max-width: 400px;
+  max-width: 300px;
 }

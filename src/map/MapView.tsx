@@ -42,6 +42,8 @@ export function MapView({ activeNode, dimmed, off, onOpen, nodeExtra, nodeBubble
   const narrow = useNarrow()
   const { view, fit, zoomIn, zoomOut, handlers } = usePanZoom(viewport, MAP_SIZE, !narrow)
   const [hovered, setHovered] = useState<string | null>(null)
+  // foco pelo teclado mostra o cartão da ficha, mas não apaga o resto do mapa
+  const [focused, setFocused] = useState<string | null>(null)
 
   const linked = useMemo(() => (hovered && EDGES.some((e) => e.from === hovered || e.to === hovered) ? neighbors(hovered) : null), [hovered])
   const highlight = useMemo(
@@ -49,7 +51,7 @@ export function MapView({ activeNode, dimmed, off, onOpen, nodeExtra, nodeBubble
     [linked, hovered],
   )
   const activeTopic = activeNode ? topicOfNode(activeNode) : null
-  const hoveredTopic = hovered ? getTopic(hovered) : undefined
+  const hoveredTopic = (hovered ?? focused) ? getTopic((hovered ?? focused)!) : undefined
 
   const node = (t: TopicMeta, positioned: boolean) => {
     const box = nodeBox(t.id)
@@ -63,6 +65,7 @@ export function MapView({ activeNode, dimmed, off, onOpen, nodeExtra, nodeBubble
         off={off?.has(t.id)}
         onOpen={onOpen}
         onHover={setHovered}
+        onFocusChange={setFocused}
         extra={nodeExtra?.(t)}
         bubble={nodeBubble?.(t)}
       />
