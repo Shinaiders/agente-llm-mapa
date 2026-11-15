@@ -7,6 +7,7 @@ export const SCENARIOS: Scenario[] = [
   { id: 'modelo-fora', label: 'Modelo fora do ar', question: 'Vocês entregam no bairro Jardim das Flores?' },
   { id: 'cardapio', label: 'Pergunta sobre o cardápio', question: 'Quanto custa a pizza de quatro queijos grande?' },
   { id: 'ferramenta', label: 'Pedido que precisa de ferramenta', question: 'Quero uma calabresa grande, para entregar.' },
+  { id: 'personalizado', label: 'Pergunta livre 💬', question: 'Posso pedir meia marguerita e meia calabresa?' },
 ]
 
 export function getScenario(id: Scenario['id']): Scenario {

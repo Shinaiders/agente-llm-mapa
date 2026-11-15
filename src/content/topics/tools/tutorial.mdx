@@ -1,0 +1,105 @@
+## O que é
+
+Uma **tool** (ferramenta ou function calling) é uma função do seu sistema que você disponibiliza para o modelo de linguagem invocar quando ele precisar interagir com o mundo real.
+
+Sozinho, o modelo é um gerador de texto: ele prevê a próxima palavra. Ele não consegue consultar um banco de dados, enviar um e-mail ou disparar um pedido na cozinha da pizzaria por conta própria. Com tools, você declara para o modelo: *"aqui está uma lista de funções com seus nomes, descrições e parâmetros esperados"*.
+
+Quando a conversa exige uma ação, em vez de responder com texto comum, o modelo responde pedindo a execução de uma tool específica, enviando os argumentos em formato estruturado (JSON). O seu código roda a função real e devolve o resultado para o modelo concluir o atendimento.
+
+## Para que serve
+
+Para transformar um assistente que apenas conversa num agente capaz de executar tarefas de ponta a ponta.
+
+<AntesDepois
+  antes={'O cliente pede uma pizza de calabresa. O modelo responde: "Perfeito, pedido anotado e enviado para a cozinha!", mas nada aconteceu no banco de dados da pizzaria.'}
+  depois={'O modelo identifica a intenção, emite uma chamada tool_use para a função "anotar_pedido", o sistema grava o pedido nº 127 no banco e o modelo confirma o número real ao cliente.'}
+/>
+
+<OndeSeEncaixa />
+
+As ferramentas ficam na camada de **Ação**. O modelo recebe a mensagem do usuário, decide se precisa de uma ferramenta, emite o pedido de execução, o sistema executa a função e entrega a resposta de volta ao modelo para formulação da resposta final.
+
+## Como montar
+
+Usando o SDK oficial da Anthropic em TypeScript, definimos as ferramentas no parâmetro `tools`.
+
+### 1. Defina o esquema da ferramenta
+
+Você ensina ao modelo o nome da função, para que serve e quais campos ela exige:
+
+```ts
+import Anthropic from '@anthropic-ai/sdk'
+
+const claude = new Anthropic()
+
+const tools: Anthropic.Tool[] = [
+  {
+    name: 'anotar_pedido',
+    description: 'Registra um novo pedido na cozinha da pizzaria e gera o número do pedido.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        sabor: { type: 'string', description: 'Sabor da pizza, ex: calabresa, marguerita' },
+        tamanho: { type: 'string', enum: ['broto', 'media', 'grande'], description: 'Tamanho da pizza' },
+        entrega: { type: 'boolean', description: 'Se o pedido é para entrega a domicílio' },
+      },
+      required: ['sabor', 'tamanho'],
+    },
+  },
+]
+```
+
+### 2. Envie as tools na requisição do Claude
+
+Ao chamar a API, inclua o array de `tools`:
+
+```ts
+const resposta = await claude.messages.create({
+  model: 'claude-3-7-sonnet-20250219',
+  max_tokens: 1024,
+  messages: [{ role: 'user', content: 'Quero uma calabresa grande para entregar na Rua das Flores!' }],
+  tools,
+})
+```
+
+### 3. Trate o `stop_reason === 'tool_use'`
+
+Quando o modelo decide usar uma ferramenta, `stop_reason` vem como `'tool_use'`:
+
+```ts
+if (resposta.stop_reason === 'tool_use') {
+  const blocoTool = resposta.content.find((b) => b.type === 'tool_use')
+  if (blocoTool && blocoTool.name === 'anotar_pedido') {
+    // 1. Executa no seu sistema real
+    const pedidoCriado = { id: 127, status: 'confirmado' }
+
+    // 2. Devolve o resultado como tool_result
+    const respostaFinal = await claude.messages.create({
+      model: 'claude-3-7-sonnet-20250219',
+      max_tokens: 1024,
+      messages: [
+        { role: 'user', content: 'Quero uma calabresa grande para entregar!' },
+        { role: 'assistant', content: resposta.content },
+        {
+          role: 'user',
+          content: [
+            {
+              type: 'tool_result',
+              tool_use_id: blocoTool.id,
+              content: JSON.stringify(pedidoCriado),
+            },
+          ],
+        },
+      ],
+      tools,
+    })
+    console.log(respostaFinal.content)
+  }
+}
+```
+
+## Erros comuns
+
+- **Descrições vagas:** O modelo escolhe a tool com base na descrição. Se a descrição for genérica ou faltar exemplos, o modelo pode não chamá-la ou inventar argumentos.
+- **Não validar argumentos recebidos:** Nunca confie cegamente nos parâmetros devolvidos pelo modelo; use validação com Zod antes de rodar comandos perigosos no banco de dados.
+- **Esquecer de devolver `tool_result`:** Se você não enviar a mensagem com `tool_result` associado ao `tool_use_id`, a conversa fica travada em estado inconsistente.

@@ -1,0 +1,44 @@
+[
+  {
+    "index": 0,
+    "text": "Toda vez que você fecha a conversa, o modelo esquece de tudo. Ele começa do zero no próximo pedido.",
+    "start": 0,
+    "end": 5.2
+  },
+  {
+    "index": 1,
+    "text": "A memória é o caderninho onde o Pip anota o que é importante lembrar sobre você.",
+    "start": 5.45,
+    "end": 9.8
+  },
+  {
+    "index": 2,
+    "text": "Existe a memória da conversa atual: as últimas mensagens trocadas no chat.",
+    "start": 10.05,
+    "end": 14.5
+  },
+  {
+    "index": 3,
+    "text": "E existe a memória de longo prazo: preferências salvas que valem para sempre.",
+    "start": 14.75,
+    "end": 19.3
+  },
+  {
+    "index": 4,
+    "text": "Por exemplo: saber que a Ana é alérgica a camarão e não gosta de cebola.",
+    "start": 19.55,
+    "end": 24.2
+  },
+  {
+    "index": 5,
+    "text": "Quando o cliente volta, o sistema busca essas anotações e coloca no contexto do modelo.",
+    "start": 24.45,
+    "end": 29.5
+  },
+  {
+    "index": 6,
+    "text": "Assim, o cliente se sente em casa e não precisa repetir tudo de novo a cada pedido.",
+    "start": 29.75,
+    "end": 34.8
+  }
+]

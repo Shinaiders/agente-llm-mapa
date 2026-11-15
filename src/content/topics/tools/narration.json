@@ -1,0 +1,11 @@
+{
+  "lines": [
+    "Sozinho, o modelo só consegue conversar. Ele não tem mãos para mexer no mundo real.",
+    "As ferramentas, ou tools, são as mãos que você entrega para o Pip.",
+    "Você ensina ao modelo uma lista de funções que ele tem permissão de pedir para rodar.",
+    "Por exemplo: consultar o cardápio, calcular taxa de entrega ou lançar um pedido na cozinha.",
+    "Quando o cliente pede uma pizza, o modelo não inventa o pedido: ele monta uma chamada em JSON.",
+    "O seu sistema executa a função de verdade e devolve o resultado para o modelo continuar.",
+    "Com ferramentas, o modelo deixa de ser só um gerador de texto e vira um agente capaz de agir."
+  ]
+}

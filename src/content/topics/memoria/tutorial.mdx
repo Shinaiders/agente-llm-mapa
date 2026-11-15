@@ -1,0 +1,87 @@
+## O que é
+
+Por padrão, os modelos de linguagem são completamente **stateless**: eles não têm memória própria entre requisições. Quando uma conversa termina ou o usuário atualiza a página, tudo o que foi falado desaparece do cérebro do modelo.
+
+A **memória** é a estratégia que permite ao agente reter informações ao longo do tempo. Ela se divide em dois tipos essenciais:
+- **Memória de curto prazo (Working Memory):** As mensagens recentes da conversa atual, mantidas no histórico de `messages`.
+- **Memória de longo prazo (Persistent Memory):** Fatos, preferências e histórico de pedidos salvos num banco de dados, indexados pelo identificador do cliente (como telefone ou e-mail).
+
+## Para que serve
+
+Para proporcionar um atendimento humanizado, ágil e contextualizado, poupando o cliente de repetir suas restrições e preferências a cada interação.
+
+<AntesDepois
+  antes={'O cliente frequente pede: "Quero a mesma pizza da semana passada, sem cebola". O modelo responde: "Desculpe, não sei quem você é nem o que pediu antes".'}
+  depois={'O sistema recupera o perfil da cliente Ana, injeta as preferências no prompt e o Pip responde: "Com certeza, Ana! Uma marguerita sem cebola para entregar no seu endereço?".'}
+/>
+
+<OndeSeEncaixa />
+
+A memória fica na camada de **Conhecimento**. Antes de enviar a mensagem do usuário para o LLM, o sistema consulta o banco de memória do cliente e anexa suas preferências ao prompt. Ao final da conversa, novas informações relevantes são extraídas e persistidas.
+
+## Como montar
+
+Implementamos a memória de longo prazo com persistência simples e injeção contextual.
+
+### 1. Defina a estrutura do perfil do cliente
+
+```ts
+interface PerfilCliente {
+  id: string
+  nome: string
+  preferencias: string[]
+  restricoes: string[]
+  ultimoPedido?: string
+}
+
+// Simulação de banco de dados
+const bancoDeMemoria = new Map<string, PerfilCliente>()
+
+bancoDeMemoria.set('cliente-123', {
+  id: 'cliente-123',
+  nome: 'Ana',
+  preferencias: ['gosta de massa fina', 'pede sempre aos sábados'],
+  restricoes: ['alérgica a camarão', 'não come cebola'],
+  ultimoPedido: 'Marguerita grande',
+})
+```
+
+### 2. Injete a memória no `system` prompt
+
+Antes de chamar a API, monte um bilhete personalizado com as memórias do cliente:
+
+```ts
+import Anthropic from '@anthropic-ai/sdk'
+
+const claude = new Anthropic()
+
+export async function atenderComMemoria(clienteId: string, mensagem: string) {
+  const perfil = bancoDeMemoria.get(clienteId)
+
+  const instrucaoMemoria = perfil
+    ? `DADOS SOBRE O CLIENTE:\n- Nome: ${perfil.nome}\n- Preferências: ${perfil.preferencias.join(', ')}\n- Restrições alimentares: ${perfil.restricoes.join(', ')}`
+    : 'CLIENTE NOVO: Pergunte o nome e preferências se for relevante.'
+
+  const resposta = await claude.messages.create({
+    model: 'claude-3-7-sonnet-20250219',
+    max_tokens: 1024,
+    system: `Você é o Pip, atendente da pizzaria.\n${instrucaoMemoria}`,
+    messages: [{ role: 'user', content: mensagem }],
+  })
+
+  return resposta.content
+    .filter((b) => b.type === 'text')
+    .map((b) => b.text)
+    .join('')
+}
+```
+
+### 3. Atualize a memória no final da conversa
+
+Use ferramentas ou extração estruturada para salvar novos fatos quando o cliente expressar uma preferência (ex: *"agora virei vegetariano"*).
+
+## Erros comuns
+
+- **Injetar histórico infinito sem podar:** Enviar 50 mensagens anteriores estourará a janela de contexto e aumentará o custo por token desnecessariamente. Use resumos ou janelas deslizantes (ex: últimas 6 mensagens).
+- **Salvar dados confidenciais sem consentimento:** Dados pessoais sensíveis (como cartões ou senhas) nunca devem ser gravados na memória do agente, respeitando a LGPD.
+- **Conflito de preferências antigas:** Se o cliente disser que agora gosta de cebola, garanta que a memória antiga seja atualizada para não criar contradições.

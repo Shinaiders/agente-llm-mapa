@@ -1,14 +1,15 @@
 import { RotateCcw } from 'lucide-react'
-import type { ReactNode } from 'react'
+import { type ReactNode, useMemo, useState } from 'react'
 import { HiatoolsButton, HiatoolsByline } from '../brand/HiatoolsCta'
-import { getTopic } from '../content/registry'
-import type { TopicId, TopicMeta } from '../content/types'
+import { TOPICS, getTopic } from '../content/registry'
+import type { LayerId, TopicId, TopicMeta } from '../content/types'
 import { getScenario } from '../sim/scenarios'
 import { type NodeId, TOGGLEABLE, type Toggleable } from '../sim/types'
 import { MapView } from './MapView'
 import { Pulse, TransitPulse } from './Pulse'
 import { ResultPanel } from './ResultPanel'
 import { ScenarioBar } from './ScenarioBar'
+import { SearchBar } from './SearchBar'
 import { StepControls } from './StepControls'
 import { topicOfNode } from './layout'
 import './map-screen.css'
@@ -34,10 +35,37 @@ export function MapScreen({ onOpen, sim: external, actions, notice, transit }: P
   const sim = external ?? own
   const reducedMotion = useReducedMotion()
   const narrow = useNarrow()
+  const [searchQuery, setSearchQuery] = useState('')
+  const [selectedLayer, setSelectedLayer] = useState<LayerId | 'all'>('all')
+
+  const matchingTopics = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase()
+    return TOPICS.filter((t) => {
+      if (selectedLayer !== 'all' && t.layer !== selectedLayer) return false
+      if (!q) return true
+      return (
+        t.title.toLowerCase().includes(q) ||
+        t.analogy.toLowerCase().includes(q) ||
+        t.snippet.toLowerCase().includes(q) ||
+        t.id.toLowerCase().includes(q)
+      )
+    })
+  }, [searchQuery, selectedLayer])
+
+  const searchDimmed = useMemo(() => {
+    if (!searchQuery.trim() && selectedLayer === 'all') return undefined
+    const matchIds = new Set(matchingTopics.map((t) => t.id))
+    return new Set(TOPICS.filter((t) => !matchIds.has(t.id)).map((t) => t.id))
+  }, [searchQuery, selectedLayer, matchingTopics])
+
   const hop = sim.result.hops[sim.hopIndex]
   const activeTopic = topicOfNode(hop.node)
   const off = new Set(TOGGLEABLE.filter((k) => !sim.enabled[k]))
   const done = sim.hopIndex === sim.result.hops.length - 1
+
+  const currentQuestion = sim.scenario === 'personalizado' && sim.customQuestion?.trim()
+    ? sim.customQuestion.trim()
+    : getScenario(sim.scenario).question
 
   const nodeExtra = (t: TopicMeta) => {
     if (!isToggleable(t.id)) return null
@@ -80,16 +108,44 @@ export function MapScreen({ onOpen, sim: external, actions, notice, transit }: P
           <HiatoolsButton />
         </div>
       </header>
+      <SearchBar
+        query={searchQuery}
+        onQueryChange={setSearchQuery}
+        selectedLayer={selectedLayer}
+        onLayerChange={setSelectedLayer}
+        matchCount={matchingTopics.length}
+        totalCount={TOPICS.length}
+      />
+      {sim.scenario === 'personalizado' && (
+        <div className="custom-question-box">
+          <label htmlFor="custom-q-input">Mensagem do cliente para o Pip:</label>
+          <input
+            id="custom-q-input"
+            type="text"
+            className="custom-question-input"
+            value={sim.customQuestion ?? ''}
+            onChange={(e) => sim.setCustomQuestion?.(e.target.value)}
+            placeholder="Ex: Quanto custa a pizza? Ou: anote uma calabresa para entrega..."
+          />
+        </div>
+      )}
       {notice}
       <div className="map-stage">
         <div className="map-canvas">
-          <MapView activeNode={transit ? (transit.to as NodeId) : hop.node} off={off} onOpen={onOpen} nodeExtra={nodeExtra} nodeBubble={nodeBubble}>
+          <MapView
+            activeNode={transit ? (transit.to as NodeId) : hop.node}
+            dimmed={searchDimmed}
+            off={off}
+            onOpen={onOpen}
+            nodeExtra={nodeExtra}
+            nodeBubble={nodeBubble}
+          >
             {!narrow && transit && <TransitPulse from={transit.from} to={transit.to} ms={transit.ms} reducedMotion={reducedMotion} />}
             {!narrow && !transit && <Pulse hops={sim.result.hops} hopIndex={sim.hopIndex} travelMs={HOP_MS - 150} reducedMotion={reducedMotion} />}
           </MapView>
         </div>
         <aside className="map-dock">
-          <ResultPanel question={getScenario(sim.scenario).question} result={sim.result} done={done}>
+          <ResultPanel question={currentQuestion} result={sim.result} done={done}>
             <div className="dock-controls">
               <StepControls
                 hopIndex={sim.hopIndex}

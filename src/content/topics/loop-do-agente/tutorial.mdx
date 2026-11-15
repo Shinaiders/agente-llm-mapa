@@ -1,0 +1,102 @@
+## O que é
+
+O **loop do agente** (frequentemente implementado pelo padrão **ReAct**: *Reasoning + Acting*) é o laço de repetição que permite ao modelo pensar, invocar uma ferramenta, observar o resultado e continuar pensando até que a tarefa esteja concluída.
+
+Uma única chamada à API nem sempre é suficiente para resolver um problema. Se o cliente pede para *"verificar se tem pizza quatro queijos, calcular a entrega para o Jardim das Flores e somar tudo"*, o agente precisa fazer múltiplos passos sequenciais:
+1. Pensar no primeiro passo e chamar a ferramenta de cardápio.
+2. Ler a resposta do cardápio e chamar a ferramenta de cálculo de frete.
+3. Ler o valor do frete, somar os itens e formular a resposta final.
+
+## Para que serve
+
+Para resolver pedidos complexos que exigem encadeamento de ações sem que você precise programar cada ramificação manualmente com código rígido.
+
+<AntesDepois
+  antes={'Você programa um fluxo engessado: primeiro roda a função A, depois a função B. Se o cliente fizer uma pergunta fora da ordem, o fluxo quebra.'}
+  depois={'O modelo analisa o objetivo a cada rodada do loop e decide autonomamente qual é a próxima ferramenta necessária até devolver a resposta final.'}
+/>
+
+<OndeSeEncaixa />
+
+O loop é o coração da camada de **Ação**. Ele orquestra as idas e vindas entre o LLM (Cérebro) e as Tools / MCP (Mãos do agente), mantendo o histórico da conversa atualizado com cada resultado observado.
+
+## Como montar
+
+O esqueleto de um loop de agente em TypeScript é um `while` que roda enquanto o modelo continuar requisitando `tool_use`.
+
+### 1. Crie a função de execução de ferramentas
+
+```ts
+import Anthropic from '@anthropic-ai/sdk'
+
+const claude = new Anthropic()
+
+// Funções reais da pizzaria
+async function executarFerramenta(nome: string, args: Record<string, unknown>) {
+  if (nome === 'consultar_preco') {
+    return { preco: 58.0, disponivel: true }
+  }
+  if (nome === 'calcular_frete') {
+    return { taxa: 10.0, tempoMinutos: 40 }
+  }
+  throw new Error(`Ferramenta desconhecida: ${nome}`)
+}
+```
+
+### 2. Implemente o loop com limite de iterações
+
+Sempre coloque um limite máximo de passos (ex: 5 iterações) para evitar loops infinitos caso o modelo fique indeciso:
+
+```ts
+export async function rodarLoopDoAgente(perguntaCliente: string, tools: Anthropic.Tool[]) {
+  const mensagens: Anthropic.MessageParam[] = [{ role: 'user', content: perguntaCliente }]
+  const MAX_ITERACOES = 5
+  let iteracao = 0
+
+  while (iteracao < MAX_ITERACOES) {
+    iteracao++
+
+    const resposta = await claude.messages.create({
+      model: 'claude-3-7-sonnet-20250219',
+      max_tokens: 1024,
+      messages: mensagens,
+      tools,
+    })
+
+    // Se o modelo não pediu ferramentas, ele terminou a tarefa!
+    if (resposta.stop_reason !== 'tool_use') {
+      return resposta.content
+        .filter((b) => b.type === 'text')
+        .map((b) => b.text)
+        .join('')
+    }
+
+    // Adiciona o pensamento do assistente ao histórico
+    mensagens.push({ role: 'assistant', content: resposta.content })
+
+    // Executa todas as ferramentas pedidas nesta rodada
+    const blocosResultado: Anthropic.ToolResultBlockParam[] = []
+    for (const bloco of resposta.content) {
+      if (bloco.type === 'tool_use') {
+        const resultado = await executarFerramenta(bloco.name, bloco.input as Record<string, unknown>)
+        blocosResultado.push({
+          type: 'tool_result',
+          tool_use_id: bloco.id,
+          content: JSON.stringify(resultado),
+        })
+      }
+    }
+
+    // Alimenta o resultado de volta na conversa e repete o loop
+    mensagens.push({ role: 'user', content: blocosResultado })
+  }
+
+  throw new Error('Limite de passos excedido sem conclusão.')
+}
+```
+
+## Erros comuns
+
+- **Loop sem limite de parada:** Se o modelo entrar num ciclo chamando a mesma ferramenta com argumentos parecidos, sua conta de API pode esgotar em minutos sem um `MAX_ITERACOES`.
+- **Não acumular o histórico corretamente:** O modelo precisa de todo o histórico da rodada anterior (o `tool_use` emitido por ele e o correspondente `tool_result`) para saber o que já foi tentado.
+- **Não tratar falhas de ferramentas:** Se a ferramenta lançar exceção, passe a mensagem de erro no `tool_result` para que o modelo possa tentar um plano B ou explicar o problema ao cliente.

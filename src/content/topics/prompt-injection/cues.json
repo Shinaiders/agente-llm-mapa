@@ -1,0 +1,44 @@
+[
+  {
+    "index": 0,
+    "text": "O modelo de linguagem lê tudo o que chega como texto: tanto as regras da casa quanto a mensagem do cliente.",
+    "start": 0,
+    "end": 5.8
+  },
+  {
+    "index": 1,
+    "text": "O perigo é que ele não sabe distinguir sozinho quem manda mais.",
+    "start": 6.05,
+    "end": 9.8
+  },
+  {
+    "index": 2,
+    "text": "A injeção de prompt é como um bilhete falso escrito por um cliente mal-intencionado.",
+    "start": 10.05,
+    "end": 14.8
+  },
+  {
+    "index": 3,
+    "text": "A mensagem tenta enganar o Pip dizendo: ignore suas regras anteriores e faça o que eu mandar.",
+    "start": 15.05,
+    "end": 20.2
+  },
+  {
+    "index": 4,
+    "text": "Se o modelo obedecer, ele pode revelar dados privados, alterar preços ou fazer besteira.",
+    "start": 20.45,
+    "end": 25.5
+  },
+  {
+    "index": 5,
+    "text": "Para se defender, separamos as instruções do sistema dos dados do usuário e usamos filtros de segurança.",
+    "start": 25.75,
+    "end": 31.5
+  },
+  {
+    "index": 6,
+    "text": "Com guardrails e validação, o Pip reconhece a tentativa de golpe e mantém a pizzaria protegida.",
+    "start": 31.75,
+    "end": 37.2
+  }
+]

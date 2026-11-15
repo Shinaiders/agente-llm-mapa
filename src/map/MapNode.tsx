@@ -2,6 +2,7 @@ import type { CSSProperties, ReactNode } from 'react'
 import { getLayer } from '../content/layers'
 import type { TopicMeta } from '../content/types'
 import { FALLBACK_ICON, ICONS } from './icons'
+import { STATIONS } from './layout'
 
 interface Props {
   topic: TopicMeta
@@ -22,16 +23,18 @@ export function MapNode({ topic, style, dimmed, active, off, onOpen, onHover, on
   const layer = getLayer(topic.layer)
   const Icon = ICONS[topic.id] ?? FALLBACK_ICON
   const ready = topic.status === 'ready'
+  const isStation = STATIONS.has(topic.id)
   const label = `${topic.title} — ${layer.label}${ready ? '' : ' (em breve)'}`
 
   return (
     <div
-      className={ready ? 'node node-station' : 'node node-chip'}
+      className={isStation ? 'node node-station' : 'node node-chip'}
       style={{ ...style, ['--c' as string]: `var(${layer.colorVar})` }}
       data-node={topic.id}
       data-active={active || undefined}
       data-off={off || undefined}
       data-dimmed={dimmed || undefined}
+      data-ready={ready || undefined}
     >
       <button
         type="button"
@@ -47,10 +50,10 @@ export function MapNode({ topic, style, dimmed, active, off, onOpen, onHover, on
         onBlur={() => onFocusChange?.(null)}
       >
         <span className="node-head">
-          <Icon className="node-icon" size={ready ? 17 : 15} strokeWidth={1.9} aria-hidden="true" />
+          <Icon className="node-icon" size={isStation ? 17 : 15} strokeWidth={1.9} aria-hidden="true" />
           <span className="node-title">{topic.title}</span>
         </span>
-        {ready && (
+        {isStation && (
           <code className="node-snippet" aria-hidden="false">
             {topic.snippet}
           </code>

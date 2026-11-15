@@ -36,7 +36,37 @@ export function useNarration(audioSrc: string, cues: Cue[]): Narration {
   const timeRef = useRef(0)
   const rateRef = useRef<Rate>(1)
   const durationRef = useRef(duration)
+  const lastSpokenStepRef = useRef<number>(-1)
   durationRef.current = duration
+
+  const speakCurrentCue = useCallback(
+    (stepIdx: number) => {
+      if (typeof window === 'undefined' || !('speechSynthesis' in window)) return
+      try {
+        window.speechSynthesis.cancel()
+        if (stepIdx < 0 || stepIdx >= cues.length) return
+        const text = cues[stepIdx]?.text
+        if (!text?.trim()) return
+        const utterance = new SpeechSynthesisUtterance(text)
+        utterance.lang = 'pt-BR'
+        utterance.rate = rateRef.current
+        window.speechSynthesis.speak(utterance)
+      } catch {
+        /* TTS indisponível ou bloqueado pelo navegador */
+      }
+    },
+    [cues],
+  )
+
+  const stopSpeech = useCallback(() => {
+    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+      try {
+        window.speechSynthesis.cancel()
+      } catch {
+        /* noop */
+      }
+    }
+  }, [])
 
   const setTime = useCallback((t: number) => {
     timeRef.current = t
@@ -52,6 +82,7 @@ export function useNarration(audioSrc: string, cues: Cue[]): Narration {
     audio.preload = 'auto'
     audioRef.current = audio
     brokenRef.current = false
+    lastSpokenStepRef.current = -1
     setFallback(false)
     setTime(0)
     setPlaying(false)
@@ -61,14 +92,19 @@ export function useNarration(audioSrc: string, cues: Cue[]): Narration {
     }
     audio.addEventListener('error', onError)
     return () => {
+      stopSpeech()
       audio.removeEventListener('error', onError)
       audio.pause()
       audioRef.current = null
     }
-  }, [audioSrc, setFallback, setTime])
+  }, [audioSrc, setFallback, setTime, stopSpeech])
 
   useEffect(() => {
-    if (!playing) return
+    if (!playing) {
+      stopSpeech()
+      lastSpokenStepRef.current = -1
+      return
+    }
     let raf = 0
     let last = performance.now()
     const tick = () => {
@@ -79,21 +115,36 @@ export function useNarration(audioSrc: string, cues: Cue[]): Narration {
       const t = fallbackRef.current || !audio ? timeRef.current + dt * rateRef.current : audio.currentTime
       if (t >= durationRef.current) {
         setTime(durationRef.current)
+        stopSpeech()
         audio?.pause()
         setPlaying(false)
         return
       }
       setTime(t)
+
+      // Se estiver usando o relógio de fallback/sem arquivo de áudio, sincroniza fala via Web Speech API
+      if (fallbackRef.current) {
+        const currentStep = cueIndexAt(cues, t)
+        if (currentStep !== lastSpokenStepRef.current && currentStep >= 0) {
+          lastSpokenStepRef.current = currentStep
+          speakCurrentCue(currentStep)
+        }
+      }
+
       raf = requestAnimationFrame(tick)
     }
     raf = requestAnimationFrame(tick)
-    return () => cancelAnimationFrame(raf)
-  }, [playing, setTime])
+    return () => {
+      cancelAnimationFrame(raf)
+    }
+  }, [playing, cues, setTime, speakCurrentCue, stopSpeech])
 
   const seek = useCallback(
     (t: number) => {
       const clamped = Math.min(Math.max(t, 0), durationRef.current)
       setTime(clamped)
+      stopSpeech()
+      lastSpokenStepRef.current = -1
       const audio = audioRef.current
       if (audio && !brokenRef.current) {
         try {
@@ -103,7 +154,7 @@ export function useNarration(audioSrc: string, cues: Cue[]): Narration {
         }
       }
     },
-    [setTime],
+    [setTime, stopSpeech],
   )
 
   const play = useCallback(() => {

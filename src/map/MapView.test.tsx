@@ -20,7 +20,7 @@ test('nó "em breve" tem aria-disabled, diz "em breve" e não abre', async () =>
   expect(soon).toHaveAccessibleName(/em breve/)
   await userEvent.click(soon)
   expect(onOpen).not.toHaveBeenCalled()
-  expect(TOPICS.filter((t) => t.status === 'soon')).toHaveLength(25)
+  expect(TOPICS.filter((t) => t.status === 'soon')).toHaveLength(21)
 })
 
 test('Enter num nó pronto chama onOpen(id)', async () => {

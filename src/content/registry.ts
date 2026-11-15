@@ -2,7 +2,7 @@ import type { LayerId, TopicMeta } from './types'
 
 type Row = [id: string, title: string, analogy: string, snippet: string, next?: string]
 
-const ready = new Set(['llm', 'rag', 'fine-tuning', 'mcp', 'guardrails', 'fallback', 'evals', 'cache'])
+const ready = new Set(['llm', 'rag', 'fine-tuning', 'mcp', 'guardrails', 'fallback', 'evals', 'cache', 'tools', 'loop-do-agente', 'memoria', 'prompt-injection'])
 
 function layer(id: LayerId, rows: Row[]): TopicMeta[] {
   return rows.map(([tid, title, analogy, snippet, next]) => ({
@@ -29,15 +29,15 @@ export const TOPICS: TopicMeta[] = [
   ...layer('conhecimento', [
     ['embeddings', 'Embeddings', 'Transformar cada frase num endereço: frases parecidas moram perto.', 'const vetor = await embed(\n  "pizza sem lactose",\n)'],
     ['banco-vetorial', 'Banco vetorial', 'A estante onde os endereços ficam guardados para achar rápido.', 'await banco.buscar(vetor,\n  { top: 3 })'],
-    ['rag', 'RAG', 'Consultar o cardápio antes de responder, em vez de chutar.', 'const trechos = await buscar(pergunta)\nprompt = montar(pergunta, trechos)', 'mcp'],
-    ['memoria', 'Memória', 'O caderninho onde o Pip anota que você não gosta de cebola.', 'await memoria.salvar(cliente,\n  "sem cebola")'],
+    ['rag', 'RAG', 'Consultar o cardápio antes de responder, em vez de chutar.', 'const trechos = await buscar(pergunta)\nprompt = montar(pergunta, trechos)', 'memoria'],
+    ['memoria', 'Memória', 'O caderninho onde o Pip anota que você não gosta de cebola.', 'await memoria.salvar(cliente,\n  "sem cebola")', 'tools'],
     ['engenharia-de-contexto', 'Engenharia de contexto', 'Arrumar a mesa: só o que importa para este pedido.', 'const contexto = [regras,\n  ...trechos, ...ultimasMensagens]'],
-    ['fine-tuning', 'Fine-tuning', 'Treinar para a prova: depois de muito exercício, já sabe de cor.', '{"messages": [pergunta,\n  respostaDoJeitoCerto]}'],
+    ['fine-tuning', 'Fine-tuning', 'Treinar para a prova: depois de muito exercício, já sabe de cor.', '{"messages": [pergunta,\n  respostaDoJeitoCerto]}', 'prompt-injection'],
   ]),
   ...layer('acao', [
-    ['tools', 'Tools', 'Dar mãos ao Pip: ele pede, o sistema faz.', 'tools: [{ name: "anotar_pedido",\n  input_schema }]'],
-    ['mcp', 'MCP', 'A tomada padrão: qualquer ferramenta encaixa no mesmo plugue.', 'server.registerTool("anotar_pedido",\n  esquema, anotar)', 'fallback'],
-    ['loop-do-agente', 'Loop do agente', 'Pensar, agir, olhar o resultado e repetir até terminar.', 'while (r.stop_reason === "tool_use")\n  r = await passo(r)'],
+    ['tools', 'Tools', 'Dar mãos ao Pip: ele pede, o sistema faz.', 'tools: [{ name: "anotar_pedido",\n  input_schema }]', 'mcp'],
+    ['mcp', 'MCP', 'A tomada padrão: qualquer ferramenta encaixa no mesmo plugue.', 'server.registerTool("anotar_pedido",\n  esquema, anotar)', 'loop-do-agente'],
+    ['loop-do-agente', 'Loop do agente', 'Pensar, agir, olhar o resultado e repetir até terminar.', 'while (r.stop_reason === "tool_use")\n  r = await passo(r)', 'fallback'],
     ['planejamento', 'Planejamento', 'Escrever a lista de passos antes de pôr a mão na massa.', 'const passos = await planejar(tarefa)\nfor (const p of passos) await fazer(p)'],
     ['multi-agentes', 'Multi-agentes', 'A cozinha inteira: cada um com sua função, um chefe coordenando.', 'await Promise.all([\n  atendente(p), cozinha(p)])'],
   ]),

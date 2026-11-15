@@ -11,11 +11,11 @@ const runToEnd = () => {
   while (!next().disabled) fireEvent.click(next())
 }
 
-test('seletor mostra os 6 cenários, com "Pedido normal" marcado', () => {
+test('seletor mostra os cenários, com "Pedido normal" marcado', () => {
   setup()
   const radios = within(screen.getByRole('radiogroup', { name: 'Cenário' })).getAllByRole('radio')
   expect(radios.map((r) => r.textContent)).toEqual([
-    'Pedido normal', 'Pergunta repetida', 'Tentativa de golpe', 'Modelo fora do ar', 'Pergunta sobre o cardápio', 'Pedido que precisa de ferramenta',
+    'Pedido normal', 'Pergunta repetida', 'Tentativa de golpe', 'Modelo fora do ar', 'Pergunta sobre o cardápio', 'Pedido que precisa de ferramenta', 'Pergunta livre 💬',
   ])
   expect(radios[0]).toHaveAttribute('aria-checked', 'true')
 })
@@ -84,4 +84,17 @@ test('tocando sozinho, o pedido chega ao fim e o resultado aparece', () => {
   setup()
   for (let t = 0; t < HOP_MS * 5; t += 50) act(() => void vi.advanceTimersByTime(50))
   expect(within(screen.getByRole('region', { name: 'Resultado' })).getByText('Deu certo')).toBeInTheDocument()
+})
+
+test('busca filtra nós do mapa e esconde os que não combinam', () => {
+  setup()
+  const searchInput = screen.getByRole('textbox', { name: 'Buscar nós do mapa' })
+  fireEvent.change(searchInput, { target: { value: 'segurança' } })
+  expect(screen.getByText(/nós/)).toBeInTheDocument()
+})
+
+test('cenário personalizado exibe caixa de texto de pergunta livre', () => {
+  setup()
+  fireEvent.click(screen.getByRole('radio', { name: 'Pergunta livre 💬' }))
+  expect(screen.getByLabelText(/Mensagem do cliente para o Pip/)).toBeInTheDocument()
 })

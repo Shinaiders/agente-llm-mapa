@@ -43,6 +43,8 @@ const COL = [180, 430, 680, 930]
 const CHIPS_X = 1210
 const CHIP_STEP = 180
 
+export const STATIONS = new Set(['guardrails', 'cache', 'fine-tuning', 'fallback', 'llm', 'rag', 'evals', 'mcp'])
+
 const STATION_COL: Record<string, number> = {
   guardrails: 0,
   cache: 1,
@@ -58,10 +60,10 @@ const boxes = new Map<string, Box>()
 
 for (const lane of LANES) {
   const inLane = TOPICS.filter((t) => t.layer === lane.id)
-  for (const t of inLane.filter((t) => t.status === 'ready')) {
+  for (const t of inLane.filter((t) => STATIONS.has(t.id))) {
     boxes.set(t.id, { x: COL[STATION_COL[t.id]], y: lane.y + (lane.h - STATION.h) / 2, ...STATION })
   }
-  const chips = inLane.filter((t) => t.status !== 'ready')
+  const chips = inLane.filter((t) => !STATIONS.has(t.id))
   const single = lane.h < 136 // faixa baixa: uma fileira só, a partir da esquerda
   const perRow = single ? chips.length : Math.ceil(chips.length / 2)
   chips.forEach((t, i) => {

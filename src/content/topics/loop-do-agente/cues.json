@@ -1,0 +1,44 @@
+[
+  {
+    "index": 0,
+    "text": "Um ser humano não resolve tudo num único segundo: ele pensa, faz uma ação, olha o que aconteceu e decide o próximo passo.",
+    "start": 0,
+    "end": 5.8
+  },
+  {
+    "index": 1,
+    "text": "O loop do agente é exatamente esse ciclo de raciocínio contínuo.",
+    "start": 6.05,
+    "end": 9.8
+  },
+  {
+    "index": 2,
+    "text": "O modelo recebe o objetivo do cliente e começa pensando no que fazer.",
+    "start": 10.05,
+    "end": 14.5
+  },
+  {
+    "index": 3,
+    "text": "Se ele precisa de informação ou de uma ação, ele chama uma ferramenta.",
+    "start": 14.75,
+    "end": 19.2
+  },
+  {
+    "index": 4,
+    "text": "O resultado da ferramenta volta para a conversa, como se fosse um novo bilhete.",
+    "start": 19.45,
+    "end": 24.2
+  },
+  {
+    "index": 5,
+    "text": "O modelo lê o que a ferramenta respondeu, pensa de novo e pode chamar outra ferramenta.",
+    "start": 24.45,
+    "end": 29.8
+  },
+  {
+    "index": 6,
+    "text": "Esse ciclo se repete até o modelo concluir que a tarefa terminou e devolver a resposta final.",
+    "start": 30.05,
+    "end": 35.5
+  }
+]

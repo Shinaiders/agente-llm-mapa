@@ -1,7 +1,7 @@
 import { EDGES } from '../content/edges'
 import { TOPICS } from '../content/registry'
 import type { NodeId } from '../sim/types'
-import { LANES, MAP_SIZE, edgePath, nodeBox, nodePosition, pathBetween } from './layout'
+import { LANES, MAP_SIZE, STATIONS, edgePath, nodeBox, nodePosition, pathBetween } from './layout'
 
 const overlap = (a: ReturnType<typeof nodeBox>, b: ReturnType<typeof nodeBox>) =>
   a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h
@@ -33,8 +33,8 @@ test('cada nó fica dentro da faixa da sua camada', () => {
   }
 })
 
-test('os 8 prontos são estações (maiores); os outros são fichas', () => {
-  for (const t of TOPICS) expect(nodeBox(t.id).w > 200, t.id).toBe(t.status === 'ready')
+test('os 8 nós principais são estações (maiores); os outros são fichas', () => {
+  for (const t of TOPICS) expect(nodeBox(t.id).w > 200, t.id).toBe(STATIONS.has(t.id))
 })
 
 test('toda ligação e todo salto possível da simulação tem um caminho SVG', () => {

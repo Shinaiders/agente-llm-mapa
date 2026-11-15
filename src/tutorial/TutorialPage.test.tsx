@@ -71,9 +71,9 @@ test('"Onde se encaixa" diz de onde recebe e para onde entrega', async () => {
 test('"Próximo assunto" aponta para meta.next; o último volta ao mapa', async () => {
   const r = await open('#/assunto/rag')
   await screen.findByRole('article')
-  expect(screen.getByRole('link', { name: /MCP/ })).toHaveAttribute('href', '#/assunto/mcp')
+  expect(screen.getByRole('link', { name: /Memória/ })).toHaveAttribute('href', '#/assunto/memoria')
   r.unmount()
-  await open('#/assunto/fine-tuning')
+  await open('#/assunto/prompt-injection')
   await screen.findByRole('article')
   expect(screen.getByRole('link', { name: /Voltar ao mapa/ })).toHaveAttribute('href', '#/')
 })

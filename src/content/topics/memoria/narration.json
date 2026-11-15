@@ -1,0 +1,11 @@
+{
+  "lines": [
+    "Toda vez que você fecha a conversa, o modelo esquece de tudo. Ele começa do zero no próximo pedido.",
+    "A memória é o caderninho onde o Pip anota o que é importante lembrar sobre você.",
+    "Existe a memória da conversa atual: as últimas mensagens trocadas no chat.",
+    "E existe a memória de longo prazo: preferências salvas que valem para sempre.",
+    "Por exemplo: saber que a Ana é alérgica a camarão e não gosta de cebola.",
+    "Quando o cliente volta, o sistema busca essas anotações e coloca no contexto do modelo.",
+    "Assim, o cliente se sente em casa e não precisa repetir tudo de novo a cada pedido."
+  ]
+}

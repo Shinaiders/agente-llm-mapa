@@ -1,4 +1,4 @@
-export type ScenarioId = 'normal' | 'repetida' | 'golpe' | 'modelo-fora' | 'cardapio' | 'ferramenta'
+export type ScenarioId = 'normal' | 'repetida' | 'golpe' | 'modelo-fora' | 'cardapio' | 'ferramenta' | 'personalizado'
 export type Toggleable = 'guardrails' | 'cache' | 'rag' | 'mcp' | 'fallback'
 export type Enabled = Record<Toggleable, boolean>
 

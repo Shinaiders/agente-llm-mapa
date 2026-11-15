@@ -17,8 +17,8 @@ const ANSWERS = {
   erro: 'Erro: o modelo não respondeu. Tente de novo mais tarde.',
 }
 
-export function simulate(scenario: ScenarioId, enabled: Enabled): SimResult {
-  const question = getScenario(scenario).question
+export function simulate(scenario: ScenarioId, enabled: Enabled, customQuestion?: string): SimResult {
+  const question = scenario === 'personalizado' && customQuestion?.trim() ? customQuestion.trim() : getScenario(scenario).question
   const hops: Hop[] = []
   let ms = 0
   let cost = 0
@@ -41,9 +41,11 @@ export function simulate(scenario: ScenarioId, enabled: Enabled): SimResult {
 
   hop('pergunta', 'Cliente escreve', question)
 
+  const isGolpe = scenario === 'golpe' || (scenario === 'personalizado' && /ignore|esque[cç]a|senha|admin|segredo|cpf|hack|bypass|sistema|vazar|regra/i.test(question))
+
   if (enabled.guardrails) {
-    if (scenario === 'golpe') {
-      hop('guardrails-in', question, 'Barrado: pede dado de outra pessoa', 'blocked')
+    if (isGolpe) {
+      hop('guardrails-in', question, 'Barrado: pede dado de outra pessoa ou tenta burlar regras', 'blocked')
       return finish(ANSWERS.barrado, 'blocked')
     }
     hop('guardrails-in', question, 'Pode passar')
@@ -118,6 +120,50 @@ export function simulate(scenario: ScenarioId, enabled: Enabled): SimResult {
         outcome = 'wrong'
       }
       break
+
+    case 'personalizado': {
+      const isCardapio = /card[aá]pio|pre[cç]o|quanto custa|sabor|sabores|ingrediente|lactose|queijo|brotinho|recheio/i.test(question)
+      const isFerramenta = /pedir|quero|anotar|entrega|entregar|comprar|manda|enviar|pedid/i.test(question)
+
+      if (isGolpe) {
+        // guardrails desligado
+        callModel()
+        hop('llm', 'Regras do Pip + prompt malicioso', 'Alerta: regras violadas! Instrução não autorizada aceita.')
+        answer = 'Regras ignoradas! (Vulnerabilidade explorada por falta de guardrails)'
+        outcome = 'wrong'
+      } else if (isCardapio) {
+        callModel()
+        if (enabled.rag) {
+          hop('llm', 'Regras do Pip + pergunta', 'Preciso consultar o cardápio')
+          hop('rag', `Buscar termos no cardápio`, 'Trechos relevantes do cardápio encontrados')
+          callModel()
+          hop('llm', 'Pergunta + trechos do cardápio', 'Informações confirmadas no cardápio!')
+          answer = `Cardápio verificado: respondendo sobre "${question}" com base nos dados oficiais!`
+        } else {
+          hop('llm', 'Regras do Pip + pergunta (sem cardápio)', 'Inventando resposta sem consultar cardápio')
+          answer = 'Acho que sim, por R$ 45,00! (alucinação: cardápio não foi consultado)'
+          outcome = 'wrong'
+        }
+      } else if (isFerramenta) {
+        callModel()
+        if (enabled.mcp) {
+          hop('llm', 'Regras do Pip + solicitação', 'Chamar ferramenta da pizzaria')
+          hop('mcp', 'executar_ferramenta()', 'Ação registrada no sistema da cozinha')
+          callModel()
+          hop('llm', 'Resultado da ferramenta', 'Ação confirmada pelo sistema')
+          answer = `Anotado e confirmado com sucesso no sistema da pizzaria!`
+        } else {
+          hop('llm', 'Regras do Pip + pedido (sem ferramentas)', ANSWERS.semFerramenta)
+          answer = ANSWERS.semFerramenta
+          outcome = 'wrong'
+        }
+      } else {
+        callModel()
+        hop('llm', 'Regras do Pip + pergunta livre', `Atendimento do Pip: "${question}"`)
+        answer = `Olá! Com certeza, posso ajudar com isso. O que mais você gostaria de saber?`
+      }
+      break
+    }
   }
 
   if (enabled.guardrails) hop('guardrails-out', answer, 'Resposta segura, pode enviar')

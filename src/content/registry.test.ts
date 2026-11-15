@@ -2,13 +2,13 @@ import { EDGES } from './edges'
 import { LAYERS } from './layers'
 import { TOPICS, getTopic } from './registry'
 
-test('33 assuntos, 8 prontos com os ids combinados', () => {
+test('33 assuntos, 12 prontos com os ids combinados', () => {
   expect(TOPICS).toHaveLength(33)
   expect(
     TOPICS.filter((t) => t.status === 'ready')
       .map((t) => t.id)
       .sort(),
-  ).toEqual(['cache', 'evals', 'fallback', 'fine-tuning', 'guardrails', 'llm', 'mcp', 'rag'])
+  ).toEqual(['cache', 'evals', 'fallback', 'fine-tuning', 'guardrails', 'llm', 'loop-do-agente', 'mcp', 'memoria', 'prompt-injection', 'rag', 'tools'])
 })
 
 test('quantidade por camada confere com o spec', () => {
@@ -45,5 +45,18 @@ test('ordem de aprendizado dos prontos', () => {
     order.push(cur.id)
     cur = cur.next ? getTopic(cur.next) : undefined
   }
-  expect(order).toEqual(['llm', 'guardrails', 'cache', 'rag', 'mcp', 'fallback', 'evals', 'fine-tuning'])
+  expect(order).toEqual([
+    'llm',
+    'guardrails',
+    'cache',
+    'rag',
+    'memoria',
+    'tools',
+    'mcp',
+    'loop-do-agente',
+    'fallback',
+    'evals',
+    'fine-tuning',
+    'prompt-injection',
+  ])
 })

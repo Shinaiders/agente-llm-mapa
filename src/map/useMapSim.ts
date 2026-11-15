@@ -7,6 +7,8 @@ export const LOOP_PAUSE_MS = 1500
 
 export interface MapSim {
   scenario: ScenarioId
+  customQuestion?: string
+  setCustomQuestion?(q: string): void
   enabled: Enabled
   result: SimResult
   hopIndex: number
@@ -25,11 +27,12 @@ export interface MapSim {
 /** `frozen` segura o relógio sem mexer no tocar/pausar da pessoa (tutorial aberto, viagem em trânsito). */
 export function useMapSim(frozen = false): MapSim {
   const [scenario, setScenarioState] = useState<ScenarioId>('normal')
+  const [customQuestion, setCustomQuestionState] = useState('Posso pedir meia marguerita e meia calabresa?')
   const [enabled, setEnabled] = useState<Enabled>(ALL_ON)
   const [hopIndex, setHopIndex] = useState(0)
   const [playing, setPlaying] = useState(true)
 
-  const result = useMemo(() => simulate(scenario, enabled), [scenario, enabled])
+  const result = useMemo(() => simulate(scenario, enabled, customQuestion), [scenario, enabled, customQuestion])
   const last = result.hops.length - 1
   const atEnd = hopIndex >= last
 
@@ -41,6 +44,10 @@ export function useMapSim(frozen = false): MapSim {
 
   const setScenario = useCallback((s: ScenarioId) => {
     setScenarioState(s)
+    setHopIndex(0)
+  }, [])
+  const setCustomQuestion = useCallback((q: string) => {
+    setCustomQuestionState(q)
     setHopIndex(0)
   }, [])
   const toggle = useCallback((k: Toggleable) => {
@@ -62,6 +69,8 @@ export function useMapSim(frozen = false): MapSim {
 
   return {
     scenario,
+    customQuestion,
+    setCustomQuestion,
     enabled,
     result,
     hopIndex: Math.min(hopIndex, last),
